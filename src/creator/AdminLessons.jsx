@@ -10,7 +10,6 @@ import {
   resetLessonState 
 } from '../redux/slices/lessonSlice';
 
-// UI Components
 import Button from '../ui/Button';
 import Loading from '../ui/Loading';
 import EditModal from '../ui/EditModal';
@@ -21,7 +20,6 @@ const AdminLessons = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Local State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null);
@@ -40,7 +38,6 @@ const AdminLessons = () => {
     dispatch(fetchLessons('all'));
   }, [dispatch]);
 
-  // Handle Success and Error Notifications
   useEffect(() => {
     if (success) {
       toast.success(isEditMode ? "Lesson Updated!" : "Lesson Created!");
@@ -126,7 +123,6 @@ const AdminLessons = () => {
             {currentTopic?.name || "Lessons"}
           </h1>
           
-          {/* Small button with scroll/spin icon effect on hover */}
           <button 
             onClick={() => { resetForm(); setIsModalOpen(true); }}
             className="group flex items-center bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-2xl font-bold transition-all shadow-lg shadow-teal-100 whitespace-nowrap"
@@ -137,7 +133,6 @@ const AdminLessons = () => {
         </div>
       </div>
 
-      {/* Lesson Grid */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredLessons.length > 0 ? (
           filteredLessons.map((lesson) => (
@@ -150,9 +145,9 @@ const AdminLessons = () => {
                 {lesson.thumbnail?.url && (
                   <img src={lesson.thumbnail.url} alt="" className="w-full h-full object-cover" />
                 )}
-                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={(e) => handleEditClick(lesson, e)} className="p-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-sm hover:text-teal-600"><Pencil size={14}/></button>
-                  <button onClick={(e) => handleDelete(lesson._id, e)} className="p-2 bg-white/90 backdrop-blur-sm rounded-xl shadow-sm hover:text-red-500"><Trash2 size={14}/></button>
+                <div className="absolute top-4 right-4 flex gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={(e) => handleEditClick(lesson, e)} className="p-2.5 bg-white shadow-md rounded-xl text-slate-700 hover:text-teal-600 active:scale-95 transition-transform"><Pencil size={15}/></button>
+                  <button onClick={(e) => handleDelete(lesson._id, e)} className="p-2.5 bg-white shadow-md rounded-xl text-slate-700 hover:text-red-500 active:scale-95 transition-transform"><Trash2 size={15}/></button>
                 </div>
               </div>
               <div className="p-6">
@@ -172,7 +167,6 @@ const AdminLessons = () => {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
       <EditModal 
         isOpen={isModalOpen} 
         title={isEditMode ? "Update Lesson" : "Create New Lesson"} 
@@ -212,7 +206,6 @@ const AdminLessons = () => {
             />
           </div>
           
-          {/* Custom File Upload UI */}
           <div className="relative w-full h-40 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-center overflow-hidden transition-colors hover:border-teal-300 group/file">
             {formData.thumbnail ? (
                <img src={URL.createObjectURL(formData.thumbnail)} className="w-full h-full object-cover" alt="preview" />
