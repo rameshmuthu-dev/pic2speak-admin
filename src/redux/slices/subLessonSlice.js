@@ -118,10 +118,10 @@ const subLessonSlice = createSlice({
         state.subItems = state.subItems.filter((item) => item._id !== action.payload);
       })
       .addCase(addSentenceToSubLesson.fulfilled, (state, action) => {
-        if (state.currentSubLesson) state.currentSubLesson.content = action.payload;
+        if (state.currentSubLesson?.content) state.currentSubLesson.content = action.payload;
       })
       .addCase(updateSentenceInSubLesson.fulfilled, (state, action) => {
-        if (state.currentSubLesson) {
+        if (state.currentSubLesson?.content) {
           const index = state.currentSubLesson.content.findIndex(s => s._id === action.payload.sentenceId);
           if (index !== -1) {
             state.currentSubLesson.content[index] = { ...state.currentSubLesson.content[index], ...action.payload.updateData };
@@ -129,7 +129,7 @@ const subLessonSlice = createSlice({
         }
       })
       .addCase(deleteSentenceFromSubLesson.fulfilled, (state, action) => {
-        if (state.currentSubLesson) {
+        if (state.currentSubLesson?.content) {
           state.currentSubLesson.content = state.currentSubLesson.content.filter(s => s._id !== action.payload.sentenceId);
         }
       })
