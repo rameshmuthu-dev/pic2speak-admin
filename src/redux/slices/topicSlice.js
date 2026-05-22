@@ -1,11 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import API from '../../api/api'; 
+import API from '../../api/api';
 
-/**
- * ASYNC THUNKS
- */
-
-// 1. Fetch Topics by Category
 export const fetchTopicsByCategory = createAsyncThunk(
   'topics/fetchByCategory',
   async (categoryId, { rejectWithValue }) => {
@@ -18,14 +13,11 @@ export const fetchTopicsByCategory = createAsyncThunk(
   }
 );
 
-// 2. Create Topic
 export const createTopic = createAsyncThunk(
   'topics/create',
   async (formData, { rejectWithValue }) => {
     try {
-      const response = await API.post('/topics', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await API.post('/topics', formData);
       return response.data.topic;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to create topic");
@@ -33,14 +25,11 @@ export const createTopic = createAsyncThunk(
   }
 );
 
-// 3. Update Topic
 export const updateTopic = createAsyncThunk(
   'topics/update',
   async ({ id, formData }, { rejectWithValue }) => {
     try {
-      const response = await API.put(`/topics/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await API.put(`/topics/${id}`, formData);
       return response.data.topic;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to update topic");
@@ -48,7 +37,6 @@ export const updateTopic = createAsyncThunk(
   }
 );
 
-// 4. Delete Topic
 export const deleteTopic = createAsyncThunk(
   'topics/delete',
   async (id, { rejectWithValue }) => {
@@ -78,49 +66,34 @@ const topicSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      /* Fetch Topics */
-      .addCase(fetchTopicsByCategory.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
       .addCase(fetchTopicsByCategory.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload || [];
       })
-      .addCase(fetchTopicsByCategory.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-
-      /* Create Topic */
       .addCase(createTopic.fulfilled, (state, action) => {
         state.loading = false;
         state.success = true;
         state.items.unshift(action.payload);
       })
-
-      /* Update Topic - Added payload protection */
       .addCase(updateTopic.fulfilled, (state, action) => {
         state.loading = false;
-        if (action.payload?._id) {
-          state.success = true;
-          const index = state.items.findIndex(t => t?._id === action.payload._id);
-          if (index !== -1) {
-            state.items[index] = action.payload;
-          }
-        }
+        state.success = true;
+        const index = state.items.findIndex(t => t._id === action.payload._id);
+        if (index !== -1) state.items[index] = action.payload;
       })
-
-      /* Delete Topic - Added success flag for UI notification */
       .addCase(deleteTopic.fulfilled, (state, action) => {
         state.loading = false;
         state.success = true; 
-        state.items = state.items.filter((topic) => topic?._id !== action.payload);
+        state.items = state.items.filter((topic) => topic._id !== action.payload);
       })
-      .addCase(deleteTopic.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      });
+      .addMatcher(
+        (action) => action.type.endsWith('/pending'),
+        (state) => { state.loading = true; state.error = null; }
+      )
+      .addMatcher(
+        (action) => action.type.endsWith('/rejected'),
+        (state, action) => { state.loading = false; state.error = action.payload; }
+      );
   },
 });
 

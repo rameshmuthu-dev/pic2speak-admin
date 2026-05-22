@@ -17,9 +17,7 @@ export const createCategory = createAsyncThunk(
   'categories/create',
   async (formData, { rejectWithValue }) => {
     try {
-      const response = await API.post('/categories', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await API.post('/categories', formData);
       return response.data.category;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to create category");
@@ -31,9 +29,7 @@ export const updateCategory = createAsyncThunk(
   'categories/update',
   async ({ id, formData }, { rejectWithValue }) => {
     try {
-      const response = await API.put(`/categories/${id}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await API.put(`/categories/${id}`, formData);
       return response.data.updatedCategory; 
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to update category");
@@ -48,7 +44,6 @@ export const deleteCategory = createAsyncThunk(
       await API.delete(`/categories/${id}`);
       return id; 
     } catch (error) {
-      // Backend status 404 aaga irundhaal "Route not found" message ingae varum
       return rejectWithValue(error.response?.data?.message || "Route not found");
     }
   }
@@ -109,7 +104,7 @@ const categorySlice = createSlice({
       .addCase(deleteCategory.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(deleteCategory.fulfilled, (state, action) => {
         state.loading = false;
-        state.success = true; // Fix: success flag set seiyappattulladhu
+        state.success = true;
         state.items = state.items.filter((item) => item._id !== action.payload);
       })
       .addCase(deleteCategory.rejected, (state, action) => {

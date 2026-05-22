@@ -5,6 +5,7 @@ import categoryReducer from './slices/categorySlice';
 import topicReducer from './slices/topicSlice';
 import lessonReducer from './slices/lessonSlice';
 import sentenceReducer from './slices/sentenceSlice';
+import subLessonReducer from './slices/subLessonSlice';
 
 /**
  * REDUX STORE CONFIGURATION
@@ -23,6 +24,7 @@ const store = configureStore({
     categories: categoryReducer,
     topics: topicReducer,
     lessons: lessonReducer,
+    subLessons: subLessonReducer,
     sentences: sentenceReducer,
   },
   middleware: (getDefaultMiddleware) =>

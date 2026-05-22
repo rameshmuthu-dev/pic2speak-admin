@@ -9,17 +9,10 @@ import {
   createCategory,
   resetCategoryState 
 } from '../redux/slices/categorySlice';
-
-// UI Components
-import Button from '../ui/Button';
 import Loading from '../ui/Loading';
 import EditModal from '../ui/EditModal';
-
-// Icons
-import { 
-  Plus, FolderTree, Trash2, ArrowRight, 
-  Pencil, Image as ImageIcon, Layers, Hash 
-} from 'lucide-react';
+import ItemCard from '../ui/ItemCard';
+import { Plus, FolderTree, Hash, Image as ImageIcon, ShieldCheck } from 'lucide-react';
 
 const AdminCategories = () => {
   const dispatch = useDispatch();
@@ -31,20 +24,17 @@ const AdminCategories = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   
-  // UPDATED: Added 'order' to the initial state
   const [formData, setFormData] = useState({ 
     name: '', 
     thumbnail: null, 
-    level: 'Beginner', 
-    order: '' 
+    order: '',
+    isPremium: false
   });
 
-  // Initial Data Fetch
   useEffect(() => {
     dispatch(fetchCategories());
   }, [dispatch]);
 
-  // Unified Notification Handler
   useEffect(() => {
     if (success) {
       if (isModalOpen) {
@@ -66,39 +56,34 @@ const AdminCategories = () => {
     (cat) => cat.name.toLowerCase() === formData.name.toLowerCase() && cat._id !== selectedCategory?._id
   );
 
-  // UPDATED: Reset order field on create
   const handleOpenCreate = () => {
     setIsEditMode(false);
     setSelectedCategory(null);
-    setFormData({ name: '', thumbnail: null, level: 'Beginner', order: '' });
+    setFormData({ name: '', thumbnail: null, order: '', isPremium: false });
     setIsModalOpen(true);
   };
 
-  // UPDATED: Load existing order value into state for editing
-  const handleOpenEdit = (category, e) => {
-    e.stopPropagation();
+  const handleOpenEdit = (category) => {
     setIsEditMode(true);
     setSelectedCategory(category);
     setFormData({ 
       name: category.name, 
       thumbnail: null, 
-      level: category.level || 'Beginner',
-      order: category.order || '' 
+      order: category.order || '',
+      isPremium: category.isPremium || false
     });
     setIsModalOpen(true);
   };
 
   const handleSave = () => {
     if (!formData.name.trim()) return toast.warning("Name is required");
-    // VALIDATION: Order is now required due to backend schema
     if (!formData.order) return toast.warning("Display order number is required");
     if (isDuplicate) return toast.error("Name already exists");
 
     const data = new FormData();
     data.append('name', formData.name);
-    data.append('level', formData.level);
-    // UPDATED: Append order to FormData
-    data.append('order', formData.order); 
+    data.append('order', formData.order);
+    data.append('isPremium', formData.isPremium);
     
     if (formData.thumbnail) data.append('thumbnail', formData.thumbnail);
 
@@ -110,8 +95,7 @@ const AdminCategories = () => {
     }
   };
 
-  const handleDelete = (id, e) => {
-    e.stopPropagation(); 
+  const handleDelete = (id) => {
     if (window.confirm("Delete this category?")) {
       dispatch(deleteCategory(id));
     }
@@ -121,68 +105,36 @@ const AdminCategories = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-10">
-      
-      {/* HEADER SECTION */}
       <div className="max-w-7xl mx-auto mb-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="p-1.5 bg-teal-50 rounded-md text-teal-600">
-              <FolderTree size={16} />
-            </div>
+            <div className="p-1.5 bg-teal-50 rounded-md text-teal-600"><FolderTree size={16} /></div>
             <span className="text-xs font-bold text-teal-600 uppercase tracking-widest">Admin Control</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 uppercase tracking-tight">Categories</h1>
         </div>
-
-        <button 
-          onClick={handleOpenCreate}
-          className="group flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white px-5 py-2.5 rounded-2xl shadow-lg shadow-teal-100 transition-all active:scale-95"
-        >
-          <div className="bg-white/20 p-1 rounded-lg group-hover:rotate-90 transition-transform duration-300">
-            <Plus size={16} strokeWidth={3} />
-          </div>
+        <button onClick={handleOpenCreate} className="group flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white px-5 py-2.5 rounded-2xl shadow-lg shadow-teal-100 transition-all active:scale-95">
+          <div className="bg-white/20 p-1 rounded-lg group-hover:rotate-90 transition-transform duration-300"><Plus size={16} strokeWidth={3} /></div>
           <span className="text-xs font-black uppercase tracking-wider">New Category</span>
         </button>
       </div>
 
-      {/* CATEGORY GRID */}
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {categories.map((category) => (
-            <div key={category._id} onClick={() => navigate(`/admin/category/${category._id}`)} className="group bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl transition-all cursor-pointer overflow-hidden flex flex-col relative">
-              
-              {/* Displaying Order Badge for Admin Clarity */}
-              <div className="absolute top-2 left-2 z-10 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-1 rounded-lg">
-                Order: {category.order}
-              </div>
-
-              <div className="aspect-video bg-slate-100 relative overflow-hidden">
-                <img 
-                  src={category.thumbnail?.url} 
-                  alt={category.name} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                />
-                <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                  <button onClick={(e) => handleOpenEdit(category, e)} className="p-2 bg-white/95 text-slate-600 rounded-xl shadow-md hover:text-teal-500"><Pencil size={14} /></button>
-                  <button onClick={(e) => handleDelete(category._id, e)} className="p-2 bg-white/95 text-red-400 rounded-xl shadow-md hover:text-red-600"><Trash2 size={14} /></button>
-                </div>
-                <div className="absolute bottom-2 left-2">
-                  <span className="px-2 py-1 bg-white/90 text-[10px] font-black uppercase text-slate-600 rounded-md shadow-sm">{category.level}</span>
-                </div>
-              </div>
-
-              <div className="p-5 flex-1 flex flex-col justify-between">
-                <h3 className="text-lg font-black text-slate-800 uppercase truncate">{category.name}</h3>
-                <div className="mt-4 flex items-center text-[10px] font-black uppercase text-slate-400 group-hover:text-teal-500 transition-colors">
-                  View Topics <ArrowRight size={14} className="ml-1" />
-                </div>
-              </div>
-            </div>
+            <ItemCard 
+              key={category._id} 
+              item={category} 
+              titleKey="name"
+              onClick={() => navigate(`/admin/category/${category._id}`)}
+              onEdit={() => handleOpenEdit(category)}
+              onDelete={() => handleDelete(category._id)}
+              subtitle="View Topics"
+            />
           ))}
         </div>
       </div>
 
-      {/* MODAL SECTION */}
       <EditModal 
         isOpen={isModalOpen} 
         title={isEditMode ? "Edit Category" : "New Category"} 
@@ -192,7 +144,6 @@ const AdminCategories = () => {
         saveText={isEditMode ? "Update" : "Create"}
       >
         <div className="max-w-md mx-auto space-y-6 py-2">
-          {/* Name Field */}
           <div className="space-y-2">
             <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Name</label>
             <input 
@@ -203,7 +154,6 @@ const AdminCategories = () => {
             />
           </div>
 
-          {/* NEW: Order Field (Required for the Lock System) */}
           <div className="space-y-2">
             <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Display Order (Phase Number)</label>
             <div className="relative">
@@ -218,24 +168,19 @@ const AdminCategories = () => {
             </div>
           </div>
 
-          {/* Level Field */}
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Learning Level</label>
-            <div className="relative">
-              <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <select 
-                className="w-full p-4 pl-12 bg-slate-50 rounded-2xl font-bold border-2 border-transparent focus:border-teal-500 outline-none appearance-none cursor-pointer"
-                value={formData.level}
-                onChange={(e) => setFormData({...formData, level: e.target.value})}
-              >
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
-              </select>
+          <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl cursor-pointer" onClick={() => setFormData({...formData, isPremium: !formData.isPremium})}>
+            <div className={`p-2 rounded-xl ${formData.isPremium ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-400'}`}>
+              <ShieldCheck size={20} />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-slate-800">Premium Content</p>
+              <p className="text-xs text-slate-500">Enable to lock for non-premium users</p>
+            </div>
+            <div className={`w-12 h-6 rounded-full relative transition-colors ${formData.isPremium ? 'bg-amber-500' : 'bg-slate-300'}`}>
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.isPremium ? 'left-7' : 'left-1'}`} />
             </div>
           </div>
 
-          {/* Thumbnail Field */}
           <div className="space-y-2">
             <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Thumbnail (16:9)</label>
             <div className="relative w-full aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-center overflow-hidden group hover:border-teal-400 transition-all cursor-pointer">

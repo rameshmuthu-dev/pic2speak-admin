@@ -10,10 +10,10 @@ import {
   resetLessonState 
 } from '../redux/slices/lessonSlice';
 
-import Button from '../ui/Button';
 import Loading from '../ui/Loading';
 import EditModal from '../ui/EditModal';
-import { Plus, Trash2, ArrowLeft, Pencil, Image as ImageIcon } from 'lucide-react';
+import ItemCard from '../ui/ItemCard'; 
+import { Plus, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 
 const AdminLessons = () => {
   const { topicId } = useParams(); 
@@ -26,8 +26,6 @@ const AdminLessons = () => {
   const [formData, setFormData] = useState({ 
     title: '', 
     description: '', 
-    level: 'Beginner', 
-    partNumber: 1, 
     thumbnail: null 
   });
 
@@ -58,7 +56,7 @@ const AdminLessons = () => {
   );
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', level: 'Beginner', partNumber: 1, thumbnail: null });
+    setFormData({ title: '', description: '', thumbnail: null });
     setSelectedLesson(null);
     setIsEditMode(false);
   };
@@ -69,16 +67,12 @@ const AdminLessons = () => {
     const data = new FormData();
     data.append('title', formData.title);
     data.append('description', formData.description);
-    data.append('level', formData.level);
-    data.append('partNumber', formData.partNumber);
     data.append('topic', topicId);
     
     const categoryId = currentTopic?.category?._id || currentTopic?.category;
     if (categoryId) data.append('category', categoryId);
 
-    if (formData.thumbnail) {
-      data.append('thumbnail', formData.thumbnail);
-    }
+    if (formData.thumbnail) data.append('thumbnail', formData.thumbnail);
 
     if (isEditMode) {
       dispatch(updateLesson({ id: selectedLesson._id, formData: data }));
@@ -88,22 +82,18 @@ const AdminLessons = () => {
     }
   };
 
-  const handleEditClick = (lesson, e) => {
-    e.stopPropagation();
+  const handleEditClick = (lesson) => {
     setIsEditMode(true);
     setSelectedLesson(lesson);
     setFormData({
       title: lesson.title,
       description: lesson.description || '',
-      level: lesson.level,
-      partNumber: lesson.partNumber,
       thumbnail: null
     });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id, e) => {
-    e.stopPropagation();
+  const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this lesson?")) {
       dispatch(deleteLesson(id)).then(() => toast.info("Lesson deleted"));
     }
@@ -122,7 +112,6 @@ const AdminLessons = () => {
           <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-slate-800">
             {currentTopic?.name || "Lessons"}
           </h1>
-          
           <button 
             onClick={() => { resetForm(); setIsModalOpen(true); }}
             className="group flex items-center bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-2xl font-bold transition-all shadow-lg shadow-teal-100 whitespace-nowrap"
@@ -136,26 +125,14 @@ const AdminLessons = () => {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filteredLessons.length > 0 ? (
           filteredLessons.map((lesson) => (
-            <div 
-              key={lesson._id} 
-              onClick={() => navigate(`/admin/lesson/${lesson._id}`)}
-              className="group bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden"
-            >
-              <div className="h-48 bg-slate-200 relative">
-                {lesson.thumbnail?.url && (
-                  <img src={lesson.thumbnail.url} alt="" className="w-full h-full object-cover" />
-                )}
-                <div className="absolute top-4 right-4 flex gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={(e) => handleEditClick(lesson, e)} className="p-2.5 bg-white shadow-md rounded-xl text-slate-700 hover:text-teal-600 active:scale-95 transition-transform"><Pencil size={15}/></button>
-                  <button onClick={(e) => handleDelete(lesson._id, e)} className="p-2.5 bg-white shadow-md rounded-xl text-slate-700 hover:text-red-500 active:scale-95 transition-transform"><Trash2 size={15}/></button>
-                </div>
-              </div>
-              <div className="p-6">
-                <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Part {lesson.partNumber}</span>
-                <h3 className="text-xl font-black uppercase tracking-tight truncate text-slate-800">{lesson.title}</h3>
-                <p className="text-slate-500 text-xs mt-2 line-clamp-2 leading-relaxed">{lesson.description}</p>
-              </div>
-            </div>
+            <ItemCard 
+              key={lesson._id}
+              item={lesson}
+              titleKey="title"
+              onClick={() => navigate(`/admin/lesson/${lesson._id}/sublessons`)}
+              onEdit={() => handleEditClick(lesson)}
+              onDelete={() => handleDelete(lesson._id)}
+            />
           ))
         ) : (
           <div className="col-span-full py-20 text-center">
@@ -187,24 +164,6 @@ const AdminLessons = () => {
             onChange={(e) => setFormData({...formData, description: e.target.value})} 
             placeholder="Description" 
           />
-          <div className="grid grid-cols-2 gap-4">
-            <select 
-              className="w-full p-4 bg-slate-50 rounded-2xl font-bold border-none outline-none appearance-none" 
-              value={formData.level} 
-              onChange={(e) => setFormData({...formData, level: e.target.value})}
-            >
-              <option value="Beginner">Beginner</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
-            </select>
-            <input 
-              type="number" 
-              className="w-full p-4 bg-slate-50 rounded-2xl font-bold border-none outline-none" 
-              value={formData.partNumber} 
-              onChange={(e) => setFormData({...formData, partNumber: e.target.value})} 
-              placeholder="Part #" 
-            />
-          </div>
           
           <div className="relative w-full h-40 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-center overflow-hidden transition-colors hover:border-teal-300 group/file">
             {formData.thumbnail ? (

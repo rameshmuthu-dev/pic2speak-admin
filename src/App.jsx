@@ -11,7 +11,9 @@ import Login from './pages/Login';
 import AdminCategories from './creator/AdminCategories';
 import AdminTopics from './creator/AdminTopics';
 import AdminLessons from './creator/AdminLessons';
-import AdminSentences from './creator/AdminSentences'; // Imported our new component
+import AdminSubLessons from './creator/AdminSubLessons'; // New Sub-Lesson Creator Component
+import LessonDetails from './creator/LessonDetails';     // Lesson Details Component
+import AdminSentences from './creator/AdminSentences';   // Sentence Management Component
 
 /**
  * PROTECTED ROUTES WRAPPER
@@ -40,7 +42,7 @@ const App = () => {
           <Route 
             path="/login" 
             element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} 
-          / >
+          />
 
           {/* --- PRIVATE / ADMIN ROUTES --- */}
           <Route element={<ProtectedRoutes isAuthenticated={isAuthenticated} />}>
@@ -54,11 +56,19 @@ const App = () => {
             {/* Level 2: Topic Management (Kitchen, Classroom, etc.) */}
             <Route path="/admin/category/:categoryId" element={<AdminTopics />} />
 
-            {/* Level 3: Lesson Management (Making Tea, Reading, etc.) */}
+            {/* Level 3: Lesson Management (Daily Routines, etc.) */}
             <Route path="/admin/topic/:topicId" element={<AdminLessons />} />
 
-            {/* Level 4: Sentence & Media Management (The Final Layer) */}
-            <Route path="/admin/lesson/:id" element={<AdminSentences />} />
+            {/* Level 3.5: Sub-Lesson Management (Bedroom Routine, Kitchen Routine, etc.) */}
+            {/* <Route path="/admin/lesson/:id/sublessons" element={<AdminSubLessons />} /> */}
+
+            <Route path="/admin/lesson/:lessonId/sublessons" element={<AdminSubLessons />} />
+
+            {/* Level 4: Sentence & Media Management inside a Specific Sub-Lesson */}
+            <Route path="/admin/sublesson/:subLessonId/sentences" element={<AdminSentences />} />
+            
+            {/* Optional: Lesson Profile/Overview Layout */}
+            <Route path="/admin/lesson/:id" element={<LessonDetails />} />
             
             {/* General Lesson List Fallback */}
             <Route path="/admin/lessons" element={<AdminLessons />} />
@@ -70,7 +80,7 @@ const App = () => {
         </Routes>
       </main>
     </div>
-  )
-}
+  );
+};
 
 export default App;
