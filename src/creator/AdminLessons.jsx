@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { 
-  fetchLessons, 
+  fetchLessonsByTopic, 
   deleteLesson, 
   createFullLesson, 
   updateLesson, 
@@ -33,8 +33,10 @@ const AdminLessons = () => {
   const { items: allTopics } = useSelector((state) => state.topics); 
 
   useEffect(() => {
-    dispatch(fetchLessons('all'));
-  }, [dispatch]);
+    if (topicId) {
+      dispatch(fetchLessonsByTopic(topicId));
+    }
+  }, [dispatch, topicId]);
 
   useEffect(() => {
     if (success) {
@@ -42,18 +44,18 @@ const AdminLessons = () => {
       setIsModalOpen(false);
       resetForm();
       dispatch(resetLessonState());
-      dispatch(fetchLessons('all')); 
+      if (topicId) {
+        dispatch(fetchLessonsByTopic(topicId));
+      }
     }
     if (error) {
       toast.error(error);
       dispatch(resetLessonState());
     }
-  }, [success, error, dispatch, isEditMode]);
+  }, [success, error, dispatch, isEditMode, topicId]);
 
   const currentTopic = allTopics?.find(t => t._id === topicId);
-  const filteredLessons = (lessons || []).filter(lesson => 
-    (lesson.topic === topicId || lesson.topic?._id === topicId)
-  );
+  const filteredLessons = lessons || [];
 
   const resetForm = () => {
     setFormData({ title: '', description: '', thumbnail: null });
@@ -99,7 +101,7 @@ const AdminLessons = () => {
     }
   };
 
-  if (loading && (!lessons || lessons.length === 0)) return <Loading fullPage={true} />;
+  if (loading && (!filteredLessons || filteredLessons.length === 0)) return <Loading fullPage={true} />;
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">

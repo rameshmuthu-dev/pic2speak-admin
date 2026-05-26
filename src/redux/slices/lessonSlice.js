@@ -13,26 +13,14 @@ export const createFullLesson = createAsyncThunk(
   }
 );
 
-export const fetchLessons = createAsyncThunk(
-  'lessons/fetchLessons',
-  async (level = 'all', { rejectWithValue }) => {
+export const fetchLessonsByTopic = createAsyncThunk(
+  'lessons/fetchByTopic',
+  async (topicId, { rejectWithValue }) => {
     try {
-      const response = await API.get(`/lessons?level=${level}`);
+      const response = await API.get(`/lessons/topic/${topicId}`);
       return response.data.lessons;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Failed to fetch lessons");
-    }
-  }
-);
-
-export const fetchLessonById = createAsyncThunk(
-  'lessons/fetchLessonById',
-  async (id, { rejectWithValue }) => {
-    try {
-      const response = await API.get(`/lessons/${id}`);
-      return response.data.lesson;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Failed to load lesson");
+      return rejectWithValue(error.response?.data?.message || "Failed to load lessons");
     }
   }
 );
@@ -79,9 +67,9 @@ const lessonSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchLessons.fulfilled, (state, action) => {
+      .addCase(fetchLessonsByTopic.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = action.payload;
+        state.items = action.payload || [];
       })
       .addCase(createFullLesson.fulfilled, (state, action) => {
         state.loading = false;
@@ -98,10 +86,6 @@ const lessonSlice = createSlice({
         if (state.currentLesson?._id === action.payload._id) {
           state.currentLesson = action.payload;
         }
-      })
-      .addCase(fetchLessonById.fulfilled, (state, action) => {
-        state.loading = false;
-        state.currentLesson = action.payload;
       })
       .addCase(deleteLesson.fulfilled, (state, action) => {
         state.loading = false;
