@@ -1,15 +1,20 @@
 import axios from 'axios';
 
+const isProduction = process.env.NODE_ENV === 'production' || import.meta.env?.MODE === 'production';
+
 const API = axios.create({
-  // baseURL: 'https://pic2speak-backend.onrender.com/api/v1',
-  baseURL: 'http://localhost:8081/api/v1'
+  baseURL: isProduction 
+    ? 'https://pic2speak-backend.onrender.com/api/v1' 
+    : 'http://localhost:8081/api/v1'
 });
 
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('adminToken'); 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('adminToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
@@ -23,8 +28,10 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('adminToken');
-      window.location.href = '/'; 
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('adminToken');
+        window.location.href = '/';
+      }
     }
     return Promise.reject(error);
   }
