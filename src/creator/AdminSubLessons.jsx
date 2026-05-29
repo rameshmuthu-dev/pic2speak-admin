@@ -95,7 +95,7 @@ const AdminSubLessons = () => {
       order: subLesson.order || 0,
       thumbnail: subLesson.thumbnail
     });
-    setPreviewImage(subLesson.thumbnail);
+    setPreviewImage(subLesson.thumbnail?.url || subLesson.thumbnail || null);
     setIsModalOpen(true);
   };
 
@@ -140,13 +140,15 @@ const AdminSubLessons = () => {
           
           <label className="flex flex-col items-center p-4 bg-slate-50 rounded-2xl cursor-pointer border-2 border-dashed border-slate-200">
             {previewImage ? (
-              <img src={typeof previewImage === 'string' ? previewImage : URL.createObjectURL(previewImage)} alt="Preview" className="h-20 w-full object-cover rounded-xl" />
+              <img src={previewImage instanceof File ? URL.createObjectURL(previewImage) : previewImage} alt="Preview" className="h-20 w-full object-cover rounded-xl" />
             ) : (
               <><ImageIcon className="text-teal-600" /> <span>Upload Thumbnail</span></>
             )}
             <input type="file" className="hidden" onChange={(e) => {
-              setFormData({...formData, thumbnail: e.target.files[0]});
-              setPreviewImage(e.target.files[0]);
+              if (e.target.files[0]) {
+                setFormData({...formData, thumbnail: e.target.files[0]});
+                setPreviewImage(e.target.files[0]);
+              }
             }} />
           </label>
         </div>

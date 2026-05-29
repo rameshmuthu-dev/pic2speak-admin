@@ -57,8 +57,8 @@ export const addSentenceToSubLesson = createAsyncThunk('subLessons/addSentence',
 
 export const updateSentenceInSubLesson = createAsyncThunk('subLessons/updateSentence', async ({ subLessonId, sentenceId, updateData }, { rejectWithValue }) => {
   try {
-    await API.put(`/sublessons/${subLessonId}/sentence/${sentenceId}`, updateData);
-    return { sentenceId, updateData };
+    const response = await API.put(`/sublessons/${subLessonId}/sentence/${sentenceId}`, updateData);
+    return { sentenceId, updatedData: response.data };
   } catch (error) {
     return rejectWithValue(error.response?.data?.message || "Failed to update sentence");
   }
@@ -121,10 +121,19 @@ const subLessonSlice = createSlice({
         if (state.currentSubLesson?.content) state.currentSubLesson.content = action.payload;
       })
       .addCase(updateSentenceInSubLesson.fulfilled, (state, action) => {
+        state.loading = false;
+        state.success = true;
         if (state.currentSubLesson?.content) {
           const index = state.currentSubLesson.content.findIndex(s => s._id === action.payload.sentenceId);
           if (index !== -1) {
-            state.currentSubLesson.content[index] = { ...state.currentSubLesson.content[index], ...action.payload.updateData };
+            if (action.payload.updatedData?.data) {
+               state.currentSubLesson.content = action.payload.updatedData.data;
+            } else {
+               state.currentSubLesson.content[index] = { 
+                 ...state.currentSubLesson.content[index], 
+                 ...action.payload.updatedData 
+               };
+            }
           }
         }
       })
