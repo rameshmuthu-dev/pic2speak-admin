@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
-  fetchSentencesBySubLesson, 
-  createSentence, 
-  updateSentence, 
-  deleteSentence, 
-  resetSentenceState 
-} from '../redux/slices/sentenceSlice';
+  fetchSubLessonById,
+  addSentenceToSubLesson,
+  updateSentenceInSubLesson,
+  deleteSentenceFromSubLesson,
+  resetSubLessonState
+} from '../redux/slices/subLessonSlice';
 
 import Button from '../ui/Button';
 import Loading from '../ui/Loading';
@@ -24,13 +24,16 @@ const AdminSentences = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { items: sentences, loading, success, error } = useSelector((state) => state.sentences);
+  const { currentSubLesson, loading, success, error } = useSelector((state) => state.subLessons);
+  const sentences = currentSubLesson?.content || [];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  
   const [formData, setFormData] = useState({
-    text: '',
+    englishText: '',
+    tamilText: '',
     isPremium: false,
     order: 0,
     image: null,
@@ -39,7 +42,7 @@ const AdminSentences = () => {
 
   useEffect(() => {
     if (subLessonId) {
-      dispatch(fetchSentencesBySubLesson(subLessonId));
+      dispatch(fetchSubLessonById(subLessonId));
     }
   }, [dispatch, subLessonId]);
 
@@ -48,34 +51,50 @@ const AdminSentences = () => {
       toast.success(isEditMode ? "Slide updated successfully!" : "Slide created successfully!");
       setIsModalOpen(false);
       setIsEditMode(false);
-      dispatch(resetSentenceState());
-      dispatch(fetchSentencesBySubLesson(subLessonId));
+      dispatch(resetSubLessonState());
+      dispatch(fetchSubLessonById(subLessonId));
     }
     if (error) {
       toast.error(error);
-      dispatch(resetSentenceState());
+      dispatch(resetSubLessonState());
     }
   }, [success, error, dispatch, isEditMode, subLessonId]);
 
   const handleOpenCreate = () => {
     setIsEditMode(false);
     setSelectedId(null);
-    setFormData({ text: '', isPremium: false, order: sentences.length + 1, image: null, audio: null });
+    setFormData({ englishText: '', tamilText: '', isPremium: false, order: sentences.length + 1, image: null, audio: null });
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (item) => {
+  const handleOpenEdit = (item, index) => {
     setIsEditMode(true);
     setSelectedId(item._id);
-    setFormData({ text: item.text, isPremium: item.isPremium, order: item.order, image: null, audio: null });
+    setFormData({ 
+      englishText: item.englishText || '', 
+      tamilText: item.tamilText || '', 
+      isPremium: item.isPremium || false, 
+      order: item.order || (index + 1), 
+      image: null, 
+      audio: null 
+    });
     setIsModalOpen(true);
   };
 
   const handleSave = () => {
-    if (!formData.text.trim()) return toast.warning("Text content is required");
+    if (!formData.englishText.trim() || !formData.tamilText.trim()) {
+      return toast.warning("Both English and Tamil text contents are required");
+    }
 
     const data = new FormData();
-    data.append('text', formData.text);
+    if (isEditMode) {
+      data.append('text', formData.englishText);
+      data.append('translation', formData.tamilText);
+    } else {
+      data.append('englishText', formData.englishText);
+      data.append('tamilText', formData.tamilText);
+    }
+    
     data.append('isPremium', String(formData.isPremium));
     data.append('order', String(formData.order));
     
@@ -83,16 +102,15 @@ const AdminSentences = () => {
     if (formData.audio) data.append('audio', formData.audio);
 
     if (isEditMode) {
-      dispatch(updateSentence({ id: selectedId, formData: data }));
+      dispatch(updateSentenceInSubLesson({ subLessonId, sentenceId: selectedId, updateData: data }));
     } else {
-      data.append('subLessonId', subLessonId);
-      dispatch(createSentence(data));
+      dispatch(addSentenceToSubLesson({ subLessonId, sentenceData: data }));
     }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (sentenceId) => {
     if (window.confirm("Are you sure you want to delete this slide?")) {
-      dispatch(deleteSentence(id));
+      dispatch(deleteSentenceFromSubLesson({ subLessonId, sentenceId }));
     }
   };
 
@@ -115,7 +133,7 @@ const AdminSentences = () => {
             </div>
             <div>
               <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">
-                Slide Management
+                {currentSubLesson?.title || "Slide Management"}
               </h1>
               <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Sentences List</p>
             </div>
@@ -126,33 +144,44 @@ const AdminSentences = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          {sentences.map((item) => (
+          {sentences.map((item, index) => (
             <div key={item._id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center gap-6 group hover:border-teal-200 transition-all">
               <div className="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden shrink-0 border border-gray-50 relative">
-                <img 
-                  src={`${item.image?.url}?t=${new Date().getTime()}`} 
-                  alt="Slide" 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                />
+                {item.image?.url ? (
+                  <img 
+                    src={`${item.image.url}?t=${new Date().getTime()}`} 
+                    alt="Slide" 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                    <ImageIcon size={24} />
+                  </div>
+                )}
               </div>
 
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-1">
-                  <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded font-black uppercase">Order: {item.order}</span>
+                  <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded font-black uppercase">
+                    Order: {item.order || (index + 1)}
+                  </span>
                   {item.isPremium && <Star size={14} className="text-amber-400 fill-amber-400" />}
                 </div>
-                <h3 className="text-lg font-bold text-gray-800 leading-tight">{item.text}</h3>
+                <h3 className="text-lg font-bold text-gray-800 leading-tight">{item.englishText}</h3>
+                <p className="text-sm text-gray-500 font-medium mt-1">{item.tamilText}</p>
                 
-                <button 
-                  onClick={() => item.audio?.url && new Audio(item.audio.url).play()} 
-                  className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-teal-600 hover:text-teal-800 transition-colors"
-                >
-                  <PlayCircle size={14} /> Play Preview
-                </button>
+                {item.audio?.url && (
+                  <button 
+                    onClick={() => new Audio(item.audio.url).play()} 
+                    className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-teal-600 hover:text-teal-800 transition-colors"
+                  >
+                    <PlayCircle size={14} /> Play Preview
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center gap-1">
-                <button onClick={() => handleOpenEdit(item)} className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all">
+                <button onClick={() => handleOpenEdit(item, index)} className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all">
                   <Pencil size={18} />
                 </button>
                 <button onClick={() => handleDelete(item._id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
@@ -179,13 +208,24 @@ const AdminSentences = () => {
       >
         <div className="space-y-5 py-2">
           <div className="space-y-2 text-left">
-            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Sentence Text</label>
+            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">English Text</label>
             <textarea 
               className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-teal-500 outline-none transition-all resize-none"
-              rows="3"
-              value={formData.text}
-              onChange={(e) => setFormData({...formData, text: e.target.value})}
+              rows="2"
+              value={formData.englishText}
+              onChange={(e) => setFormData({...formData, englishText: e.target.value})}
               placeholder="Ex: She is wearing a teal t-shirt."
+            />
+          </div>
+
+          <div className="space-y-2 text-left">
+            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Tamil Translation</label>
+            <textarea 
+              className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-teal-500 outline-none transition-all resize-none"
+              rows="2"
+              value={formData.tamilText}
+              onChange={(e) => setFormData({...formData, tamilText: e.target.value})}
+              placeholder="உதாரணம்: அவள் பச்சை நிற டி-சர்ட் அணிந்திருக்கிறாள்."
             />
           </div>
 

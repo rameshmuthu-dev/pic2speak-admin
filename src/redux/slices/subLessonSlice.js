@@ -108,6 +108,9 @@ const subLessonSlice = createSlice({
         state.success = true;
         const index = state.subItems.findIndex(item => item._id === action.payload._id);
         if (index !== -1) state.subItems[index] = action.payload;
+        if (state.currentSubLesson && state.currentSubLesson._id === action.payload._id) {
+          state.currentSubLesson = action.payload;
+        }
       })
       .addCase(fetchSubLessonById.fulfilled, (state, action) => {
         state.loading = false;
@@ -123,17 +126,18 @@ const subLessonSlice = createSlice({
       .addCase(updateSentenceInSubLesson.fulfilled, (state, action) => {
         state.loading = false;
         state.success = true;
-        if (state.currentSubLesson?.content) {
-          const index = state.currentSubLesson.content.findIndex(s => s._id === action.payload.sentenceId);
+        
+        // பேக்எண்டில் இருந்து வரும் முழு புதிய சப்-லெசன் ஆப்ஜெக்ட்
+        const updatedSubLessonData = action.payload.updatedData?.data;
+        
+        if (updatedSubLessonData) {
+          // 1. தற்போதைய சப்-லெசன் ஸ்டேட்டை அப்படியே ரீப்ளேஸ் செய்கிறோம்
+          state.currentSubLesson = updatedSubLessonData;
+          
+          // 2. சப்-லெசன்ஸ் லிஸ்ட் அரேவிலும் (subItems) இதை அப்டேட் செய்கிறோம்
+          const index = state.subItems.findIndex(item => item._id === updatedSubLessonData._id);
           if (index !== -1) {
-            if (action.payload.updatedData?.data) {
-               state.currentSubLesson.content = action.payload.updatedData.data;
-            } else {
-               state.currentSubLesson.content[index] = { 
-                 ...state.currentSubLesson.content[index], 
-                 ...action.payload.updatedData 
-               };
-            }
+            state.subItems[index] = updatedSubLessonData;
           }
         }
       })
