@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
@@ -8,7 +8,6 @@ import {
   deleteSentenceFromSubLesson,
   resetSubLessonState
 } from '../redux/slices/subLessonSlice';
-
 import Button from '../ui/Button';
 import Loading from '../ui/Loading';
 import EditModal from '../ui/EditModal';
@@ -23,6 +22,7 @@ const AdminSentences = () => {
   const { subLessonId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const activeAudioRef = useRef(null);
 
   const { currentSubLesson, loading, success, error } = useSelector((state) => state.subLessons);
   const sentences = currentSubLesson?.content || [];
@@ -30,15 +30,25 @@ const AdminSentences = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [actionType, setActionType] = useState(null);
   
   const [formData, setFormData] = useState({
     englishText: '',
-    tamilText: '',
     isPremium: false,
     order: 0,
     image: null,
     audio: null
   });
+
+  const playPreview = (url) => {
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current.currentTime = 0;
+    }
+    const newAudio = new Audio(url);
+    activeAudioRef.current = newAudio;
+    newAudio.play();
+  };
 
   useEffect(() => {
     if (subLessonId) {
@@ -47,32 +57,38 @@ const AdminSentences = () => {
   }, [dispatch, subLessonId]);
 
   useEffect(() => {
-    if (success) {
-      toast.success(isEditMode ? "Slide updated successfully!" : "Slide created successfully!");
+    if (success && actionType) {
+      if (actionType === 'create') toast.success("Slide created successfully!");
+      if (actionType === 'update') toast.success("Slide updated successfully!");
+      if (actionType === 'delete') toast.success("Slide deleted successfully!");
+      
       setIsModalOpen(false);
       setIsEditMode(false);
+      setActionType(null);
       dispatch(resetSubLessonState());
       dispatch(fetchSubLessonById(subLessonId));
     }
     if (error) {
       toast.error(error);
+      setActionType(null);
       dispatch(resetSubLessonState());
     }
-  }, [success, error, dispatch, isEditMode, subLessonId]);
+  }, [success, error, dispatch, subLessonId, actionType]);
 
   const handleOpenCreate = () => {
     setIsEditMode(false);
     setSelectedId(null);
-    setFormData({ englishText: '', tamilText: '', isPremium: false, order: sentences.length + 1, image: null, audio: null });
+    setActionType(null);
+    setFormData({ englishText: '', isPremium: false, order: sentences.length + 1, image: null, audio: null });
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (item, index) => {
     setIsEditMode(true);
     setSelectedId(item._id);
+    setActionType(null);
     setFormData({ 
       englishText: item.englishText || '', 
-      tamilText: item.tamilText || '', 
       isPremium: item.isPremium || false, 
       order: item.order || (index + 1), 
       image: null, 
@@ -81,20 +97,13 @@ const AdminSentences = () => {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
-    if (!formData.englishText.trim() || !formData.tamilText.trim()) {
-      return toast.warning("Both English and Tamil text contents are required");
+  const handleSave = useCallback(() => {
+    if (!formData.englishText.trim()) {
+      return toast.warning("English text content is required");
     }
 
     const data = new FormData();
-    if (isEditMode) {
-      data.append('text', formData.englishText);
-      data.append('translation', formData.tamilText);
-    } else {
-      data.append('englishText', formData.englishText);
-      data.append('tamilText', formData.tamilText);
-    }
-    
+    data.append('englishText', formData.englishText);
     data.append('isPremium', String(formData.isPremium));
     data.append('order', String(formData.order));
     
@@ -102,14 +111,17 @@ const AdminSentences = () => {
     if (formData.audio) data.append('audio', formData.audio);
 
     if (isEditMode) {
+      setActionType('update');
       dispatch(updateSentenceInSubLesson({ subLessonId, sentenceId: selectedId, updateData: data }));
     } else {
+      setActionType('create');
       dispatch(addSentenceToSubLesson({ subLessonId, sentenceData: data }));
     }
-  };
+  }, [dispatch, subLessonId, selectedId, isEditMode, formData]);
 
   const handleDelete = (sentenceId) => {
     if (window.confirm("Are you sure you want to delete this slide?")) {
+      setActionType('delete');
       dispatch(deleteSentenceFromSubLesson({ subLessonId, sentenceId }));
     }
   };
@@ -168,11 +180,10 @@ const AdminSentences = () => {
                   {item.isPremium && <Star size={14} className="text-amber-400 fill-amber-400" />}
                 </div>
                 <h3 className="text-lg font-bold text-gray-800 leading-tight">{item.englishText}</h3>
-                <p className="text-sm text-gray-500 font-medium mt-1">{item.tamilText}</p>
                 
                 {item.audio?.url && (
                   <button 
-                    onClick={() => new Audio(item.audio.url).play()} 
+                    onClick={() => playPreview(item.audio.url)} 
                     className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-teal-600 hover:text-teal-800 transition-colors"
                   >
                     <PlayCircle size={14} /> Play Preview
@@ -191,12 +202,6 @@ const AdminSentences = () => {
             </div>
           ))}
         </div>
-
-        {sentences.length === 0 && !loading && (
-          <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
-            <p className="text-gray-400 font-bold uppercase text-sm">No slides added yet. Start by adding one!</p>
-          </div>
-        )}
       </div>
 
       <EditModal 
@@ -215,17 +220,6 @@ const AdminSentences = () => {
               value={formData.englishText}
               onChange={(e) => setFormData({...formData, englishText: e.target.value})}
               placeholder="Ex: She is wearing a teal t-shirt."
-            />
-          </div>
-
-          <div className="space-y-2 text-left">
-            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Tamil Translation</label>
-            <textarea 
-              className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm border-2 border-transparent focus:border-teal-500 outline-none transition-all resize-none"
-              rows="2"
-              value={formData.tamilText}
-              onChange={(e) => setFormData({...formData, tamilText: e.target.value})}
-              placeholder="உதாரணம்: அவள் பச்சை நிற டி-சர்ட் அணிந்திருக்கிறாள்."
             />
           </div>
 

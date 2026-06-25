@@ -121,27 +121,26 @@ const subLessonSlice = createSlice({
         state.subItems = state.subItems.filter((item) => item._id !== action.payload);
       })
       .addCase(addSentenceToSubLesson.fulfilled, (state, action) => {
-        if (state.currentSubLesson?.content) state.currentSubLesson.content = action.payload;
+        state.loading = false;
+        state.success = true;
+        if (state.currentSubLesson) {
+          state.currentSubLesson.content = action.payload;
+        }
       })
       .addCase(updateSentenceInSubLesson.fulfilled, (state, action) => {
         state.loading = false;
         state.success = true;
-        
-        // பேக்எண்டில் இருந்து வரும் முழு புதிய சப்-லெசன் ஆப்ஜெக்ட்
-        const updatedSubLessonData = action.payload.updatedData?.data;
-        
-        if (updatedSubLessonData) {
-          // 1. தற்போதைய சப்-லெசன் ஸ்டேட்டை அப்படியே ரீப்ளேஸ் செய்கிறோம்
-          state.currentSubLesson = updatedSubLessonData;
-          
-          // 2. சப்-லெசன்ஸ் லிஸ்ட் அரேவிலும் (subItems) இதை அப்டேட் செய்கிறோம்
-          const index = state.subItems.findIndex(item => item._id === updatedSubLessonData._id);
+        const updatedSubLesson = action.payload.updatedData?.data;
+        if (updatedSubLesson) {
+          state.currentSubLesson = updatedSubLesson;
+          const index = state.subItems.findIndex(item => item._id === updatedSubLesson._id);
           if (index !== -1) {
-            state.subItems[index] = updatedSubLessonData;
+            state.subItems[index] = updatedSubLesson;
           }
         }
       })
       .addCase(deleteSentenceFromSubLesson.fulfilled, (state, action) => {
+        state.loading = false;
         if (state.currentSubLesson?.content) {
           state.currentSubLesson.content = state.currentSubLesson.content.filter(s => s._id !== action.payload.sentenceId);
         }
