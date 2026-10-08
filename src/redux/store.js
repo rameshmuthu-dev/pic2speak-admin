@@ -1,12 +1,23 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
 import adminReducer from './slices/adminSlice';
-import categoryReducer from './slices/categorySlice';
-import topicReducer from './slices/topicSlice';
-import lessonReducer from './slices/lessonSlice';
-import sentenceReducer from './slices/sentenceSlice';
-import subLessonReducer from './slices/subLessonSlice';
 
+
+
+
+// import languageReducer from './slices/languageSlice'; // Adjust path if needed
+import adventureMapReducer from './slices/adventureMapSlice'; // Adjust path if needed
+import assetGroupReducer from './slices/assetGroupSlice'; // Adjust path if needed
+
+
+import languagesReducer from './slices/Languagesslice';
+import lessonsReducer from './slices/lessonsSlice';
+
+import lessonMasterReducer from './slices/lessonMasterSlice';
+import lessonContentReducer from './slices/lessonContentSlice';
+import lessonNodeReducer from './slices/lessonNodeSlice';
+import sceneReducer from './slices/sceneSlice';
+import sceneContentReducer from './slices/sceneContentSlice';
 /**
  * REDUX STORE CONFIGURATION
  * The central state management hub for the Pic2Speak Admin Panel.
@@ -20,12 +31,21 @@ const store = configureStore({
     // Dashboard Statistics and System Health
     admin: adminReducer,
 
-    // Content Management Hierarchy
-    categories: categoryReducer,
-    topics: topicReducer,
-    lessons: lessonReducer,
-    subLessons: subLessonReducer,
-    sentences: sentenceReducer,
+   
+
+    languages: languagesReducer,
+    adventureMap: adventureMapReducer,
+    assetGroups: assetGroupReducer,
+    
+
+    lessons: lessonsReducer,
+
+    lessonMaster: lessonMasterReducer,
+    lessonContent: lessonContentReducer,
+    lessonNode: lessonNodeReducer,
+    scene: sceneReducer,
+    sceneContent: sceneContentReducer,
+  
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

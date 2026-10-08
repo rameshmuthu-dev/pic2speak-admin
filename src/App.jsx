@@ -7,13 +7,16 @@ import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 
-// Content Hierarchy Components
-import AdminCategories from './creator/AdminCategories';
-import AdminTopics from './creator/AdminTopics';
-import AdminLessons from './creator/AdminLessons';
-import AdminSubLessons from './creator/AdminSubLessons'; // New Sub-Lesson Creator Component
-import LessonDetails from './creator/LessonDetails';     // Lesson Details Component
-import AdminSentences from './creator/AdminSentences';   // Sentence Management Component
+
+
+import AdminMapBuilder from './map/AdminMapBuilder'; // Adventure Map Builder Component
+import LanguageManager from './languages/Languagemanager';
+import LessonContent from './lessons/Lessoncontent';
+import SceneManager from './scene/SceneManager';
+import SceneListPage from './scene/SceneListPage';
+import SceneContentPanel from './scene/SceneContentPanel';
+import EditScene from './scene/EditScene';
+import LessonList from './lessons/LessonList';
 
 /**
  * PROTECTED ROUTES WRAPPER
@@ -50,29 +53,18 @@ const App = () => {
             {/* Admin Dashboard / Stats */}
             <Route path="/" element={<Dashboard />} />
 
-            {/* Level 1: Category Management (Home, School, etc.) */}
-            <Route path="/admin/categories" element={<AdminCategories />} />
 
-            {/* Level 2: Topic Management (Kitchen, Classroom, etc.) */}
-            <Route path="/admin/category/:categoryId" element={<AdminTopics />} />
-
-            {/* Level 3: Lesson Management (Daily Routines, etc.) */}
-            <Route path="/admin/topic/:topicId" element={<AdminLessons />} />
-
-            {/* Level 3.5: Sub-Lesson Management (Bedroom Routine, Kitchen Routine, etc.) */}
-            {/* <Route path="/admin/lesson/:id/sublessons" element={<AdminSubLessons />} /> */}
-
-            <Route path="/admin/lesson/:lessonId/sublessons" element={<AdminSubLessons />} />
-
-            {/* Level 4: Sentence & Media Management inside a Specific Sub-Lesson */}
-            <Route path="/admin/sublesson/:subLessonId/sentences" element={<AdminSentences />} />
-            
-            {/* Optional: Lesson Profile/Overview Layout */}
-            <Route path="/admin/lesson/:id" element={<LessonDetails />} />
-            
-            {/* General Lesson List Fallback */}
-            <Route path="/admin/lessons" element={<AdminLessons />} />
-
+            {/* Adventure Map: Roads, Buildings, Trees & multi-language lesson cards */}
+            <Route path="/admin/adventure-map" element={<AdminMapBuilder />} />
+            <Route path="/admin/languages" element={<LanguageManager />} />
+             <Route path="/admin/lesson-masters" element={<LessonList />} />
+             <Route path="/admin/lesson-content" element={<LessonContent />} />
+             <Route path="/admin/scenes/create/:lessonMasterId" element={<SceneManager />} />
+             <Route path="scenes/:lessonMasterId/edit/:sceneId" element={<SceneManager />} />
+             <Route path="/admin/scenes/:lessonMasterId" element={<SceneListPage />} />
+             <Route path="/admin/scenes/:lessonMasterId/:sceneId/content" element={<SceneContentPanel />} />
+             <Route path="/admin/scenes/:lessonMasterId/edit/:sceneId" element={<EditScene />} />
+             
           </Route>
 
           {/* --- FALLBACK ROUTE --- */}
