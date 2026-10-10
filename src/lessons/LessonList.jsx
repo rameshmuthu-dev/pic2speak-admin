@@ -42,6 +42,7 @@ const LessonList = () => {
   const [formData, setFormData] = useState({
     order: '',
     completionXP: 20,
+    xpPerSentence: 2,
     rewardCoins: 10,
     accessType: 'free'
   });
@@ -65,7 +66,7 @@ const LessonList = () => {
   }, [actionStatus, error, dispatch]);
 
   const resetForm = () => {
-    setFormData({ order: '', completionXP: 20, rewardCoins: 10, accessType: 'free' });
+    setFormData({ order: '', completionXP: 20, xpPerSentence: 2, rewardCoins: 10, accessType: 'free' });
     setSelectedLesson(null);
     setIsEditMode(false);
   };
@@ -82,6 +83,7 @@ const LessonList = () => {
     setFormData({
       order: lesson.order,
       completionXP: lesson.completionXP,
+      xpPerSentence: lesson.xpPerSentence !== undefined ? lesson.xpPerSentence : 2,
       rewardCoins: lesson.rewardCoins,
       accessType: lesson.accessType || 'free'
     });
@@ -94,6 +96,7 @@ const LessonList = () => {
     const payload = {
       order: Number(formData.order),
       completionXP: Number(formData.completionXP),
+      xpPerSentence: Number(formData.xpPerSentence),
       rewardCoins: Number(formData.rewardCoins),
       accessType: formData.accessType
     };
@@ -243,8 +246,8 @@ const LessonList = () => {
                           <Star size={20} className="fill-emerald-500" />
                         </div>
                         <div>
-                          <p className="font-black text-emerald-900 text-lg leading-none">{lesson.completionXP}</p>
-                          <p className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mt-0.5">XP</p>
+                          <p className="font-black text-emerald-900 text-lg leading-none">{lesson.xpPerSentence !== undefined ? lesson.xpPerSentence : 2}</p>
+                          <p className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest mt-0.5">XP / Sent</p>
                         </div>
                       </div>
 
@@ -254,7 +257,7 @@ const LessonList = () => {
                         </div>
                         <div>
                           <p className="font-black text-amber-900 text-lg leading-none">{lesson.rewardCoins}</p>
-                          <p className="text-[10px] font-bold text-amber-600/70 uppercase tracking-widest mt-0.5">Coins</p>
+                          <p className="text-[10px] font-bold text-amber-600/70 uppercase tracking-widest mt-0.5">Coins / Comp</p>
                         </div>
                       </div>
                     </div>
@@ -317,7 +320,7 @@ const LessonList = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Completion XP</label>
               <input 
@@ -325,6 +328,15 @@ const LessonList = () => {
                 className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-slate-800 border-2 border-transparent focus:border-teal-500 focus:bg-white transition-all outline-none" 
                 value={formData.completionXP} 
                 onChange={(e) => setFormData({...formData, completionXP: e.target.value})} 
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">XP / Sentence</label>
+              <input 
+                type="number"
+                className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-slate-800 border-2 border-transparent focus:border-teal-500 focus:bg-white transition-all outline-none" 
+                value={formData.xpPerSentence} 
+                onChange={(e) => setFormData({...formData, xpPerSentence: e.target.value})} 
               />
             </div>
             <div>
