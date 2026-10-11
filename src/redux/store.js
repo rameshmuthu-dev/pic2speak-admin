@@ -6,7 +6,7 @@ import adminReducer from './slices/adminSlice';
 
 
 // import languageReducer from './slices/languageSlice'; // Adjust path if needed
-import adventureMapReducer from './slices/adventureMapSlice'; // Adjust path if needed
+import adventureMapReducer from './slices/Adventuremapslice'; // Adjust path if needed
 import assetGroupReducer from './slices/assetGroupSlice'; // Adjust path if needed
 
 
