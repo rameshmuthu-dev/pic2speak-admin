@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { uploadMapFile } from '../../redux/slices/adventureMapSlice';
+import { uploadMapFile } from '../../redux/slices/Adventuremapslice.js';
 import { loadImageNaturalSize, fitAssetDimensions } from '../utils/imageUtils.js';
 
 export const useAssetUpload = (dispatch) => {

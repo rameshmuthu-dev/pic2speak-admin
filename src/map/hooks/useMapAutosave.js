@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import debounce from 'lodash.debounce';
-import { saveDraftMap } from '../../redux/slices/adventureMapSlice';
+import { saveDraftMap } from '../../redux/slices/Adventuremapslice';
 
 export const useMapAutosave = (isDataLoaded, mapTitle, mapActive, bgSections, customThemes, mapItems, roadPaths) => {
   const dispatch = useDispatch();
