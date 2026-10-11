@@ -34,6 +34,15 @@ const MapStage = React.memo(({
   onSelectPoint,
   onDragPoint
 }) => {
+  if (
+    !Number.isFinite(containerWidth) ||
+    !Number.isFinite(stageHeight) ||
+    containerWidth <= 0 ||
+    stageHeight <= 0
+  ) {
+    return null;
+  }
+
   const nonLessonCardItems = mapItems.filter((item) => item.type !== 'Lesson Cards');
   const lessonCardItems = mapItems.filter((item) => item.type === 'Lesson Cards');
   const backgroundObjectItems = nonLessonCardItems.filter((item) => !isCharacterType(item.type));

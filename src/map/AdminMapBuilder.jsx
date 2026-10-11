@@ -187,7 +187,10 @@ const AdminBuilder = ({ onManageLanguages }) => {
   const selectedItem = mapItems.find((item) => item.id === selectedId);
   const { visibleBuildingIds, visibleHeight } = getLanguageMapProgress(mapItems, activeLanguage);
 
-  const totalStageHeight = bgSections.reduce((acc, sec) => acc + sec.height, 0);
+  const totalStageHeight = bgSections.reduce(
+    (acc, sec) => acc + Math.max(1, Number(sec.height) || 0),
+    0
+  );
   const stageHeight = totalStageHeight * scale;
 
   const lastSectionTheme = bgSections.length

@@ -9,6 +9,15 @@ export const loadImageNaturalSize = (src) => new Promise((resolve) => {
   img.src = src;
 });
 
+export const isRenderableImage = (image) => {
+  if (!image) return false;
+
+  const width = image.naturalWidth || image.width || 0;
+  const height = image.naturalHeight || image.height || 0;
+
+  return Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0;
+};
+
 const DEFAULT_ASSET_MAX_DIM = 64;
 const DEFAULT_ASSET_MIN_DIM = 28;
 

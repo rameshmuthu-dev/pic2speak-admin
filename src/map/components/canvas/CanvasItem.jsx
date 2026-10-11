@@ -1,10 +1,34 @@
-import React, { useRef, useEffect } from 'react';
-import { Group, Image as KonvaImage, Rect, Text as KonvaText } from 'react-konva';
-import useImage from 'use-image';
 
-const CanvasItem = React.memo(({ item, activeTool, isSelected, onSelect, onDelete, onClone, onDragEnd, onTransformEnd, isPreview, isHidden, isLayerActive = true }) => {
-  const [img] = useImage(item.src || item.imageUrl || '');
+import React, { useRef, useEffect } from 'react';
+import {
+  Group,
+  Image as KonvaImage,
+  Rect,
+  Text as KonvaText,
+} from 'react-konva';
+import useImage from 'use-image';
+import { isRenderableImage } from '../../utils/imageUtils.js';
+import { getOptimizedImageUrl } from '../../utils/optimizedImageUrl.js';
+
+const CanvasItem = React.memo(({
+  item,
+  activeTool,
+  isSelected,
+  onSelect,
+  onDelete,
+  onClone,
+  onDragEnd,
+  onTransformEnd,
+  isPreview,
+  isHidden,
+  isLayerActive = true,
+}) => {
+  const originalImageUrl = item.src || item.imageUrl || '';
+  const optimizedImageUrl = getOptimizedImageUrl(originalImageUrl);
+  const [img] = useImage(optimizedImageUrl);
+
   const shapeRef = useRef(null);
+  const imageIsReady = isRenderableImage(img);
 
   useEffect(() => {
     if (isSelected && shapeRef.current && !isPreview) {
@@ -30,6 +54,7 @@ const CanvasItem = React.memo(({ item, activeTool, isSelected, onSelect, onDelet
       onClick={(e) => {
         if (!canInteract) return;
         e.cancelBubble = true;
+
         if (activeTool === 'Delete') {
           onDelete(item.id);
         } else if (activeTool === 'Clone') {
@@ -41,6 +66,7 @@ const CanvasItem = React.memo(({ item, activeTool, isSelected, onSelect, onDelet
       onTap={(e) => {
         if (!canInteract) return;
         e.cancelBubble = true;
+
         if (activeTool === 'Delete') {
           onDelete(item.id);
         } else if (activeTool === 'Clone') {
@@ -50,10 +76,13 @@ const CanvasItem = React.memo(({ item, activeTool, isSelected, onSelect, onDelet
         }
       }}
       onDragEnd={(e) => {
-        if (canInteract) onDragEnd(item.id, e.target.x(), e.target.y());
+        if (canInteract) {
+          onDragEnd(item.id, e.target.x(), e.target.y());
+        }
       }}
       onTransformEnd={() => {
         if (!canInteract) return;
+
         const node = shapeRef.current;
         const scaleX = node.scaleX();
         const scaleY = node.scaleY();
@@ -79,9 +108,10 @@ const CanvasItem = React.memo(({ item, activeTool, isSelected, onSelect, onDelet
         width={item.width || 40}
         height={item.height || 40}
         fill="transparent"
-        listening={true}
+        listening
       />
-      {img ? (
+
+      {imageIsReady ? (
         <KonvaImage
           image={img}
           width={item.width || 40}
@@ -93,12 +123,17 @@ const CanvasItem = React.memo(({ item, activeTool, isSelected, onSelect, onDelet
           <Rect
             width={item.width || 40}
             height={item.height || 40}
-            fill={item.color || "#599824"}
+            fill={item.color || '#599824'}
             cornerRadius={6}
             stroke="#386623"
             strokeWidth={1}
           />
-          <KonvaText text={item.emoji || "🏢"} fontSize={16} x={10} y={10} />
+          <KonvaText
+            text={item.emoji || '🏢'}
+            fontSize={16}
+            x={10}
+            y={10}
+          />
         </Group>
       )}
     </Group>

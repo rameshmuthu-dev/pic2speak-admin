@@ -34,6 +34,11 @@ const PreviewModal = ({
   const lessonCards = previewVisibleLessonCards && previewVisibleLessonCards.length > 0 
     ? previewVisibleLessonCards 
     : mapItems.filter((item) => item.type === 'Lesson Cards');
+  const hasValidStageSize =
+    Number.isFinite(containerWidth) &&
+    Number.isFinite(previewStageHeight) &&
+    containerWidth > 0 &&
+    previewStageHeight > 0;
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -48,7 +53,7 @@ const PreviewModal = ({
         <div className="flex-1 overflow-auto p-6 bg-slate-100">
           <div className="flex justify-center mb-4">
             <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-              <Stage width={containerWidth} height={previewStageHeight} listening={false}>
+              {hasValidStageSize && <Stage width={containerWidth} height={previewStageHeight} listening={false}>
                 <Layer name="background-layer">
                   <Rect x={0} y={0} width={containerWidth} height={previewStageHeight} fill={fallbackBgColor} listening={false} />
                   <Group scaleX={scale} scaleY={scale}>
@@ -110,7 +115,7 @@ const PreviewModal = ({
                     ))}
                   </Group>
                 </Layer>
-              </Stage>
+              </Stage>}
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
