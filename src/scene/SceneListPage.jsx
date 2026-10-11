@@ -14,7 +14,7 @@ import {
 import {
   fetchLessonMasterById,
   selectSelectedLessonMaster,
-} from '../redux/slices/lessonMasterSlice';
+} from '../redux/slices/Lessonmasterslice';
 import {
   ArrowLeft,
   Plus,
