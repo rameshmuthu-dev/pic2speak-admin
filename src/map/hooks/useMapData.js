@@ -4,16 +4,16 @@ import {
   fetchDraftMap,
   saveMapAssets,
   fetchPublishedMap,
-} from '../../redux/slices/adventureMapSlice';
+} from '../../redux/slices/Adventuremapslice.js';
 import {
   fetchAssetGroups,
-} from '../../redux/slices/assetGroupSlice';
+} from '../../redux/slices/Assetgroupslice.js';
 import {
   fetchLessonMasters,
-} from '../../redux/slices/lessonMasterSlice';
+} from '../../redux/slices/Lessonmasterslice.js';
 import {
   fetchLessonContents,
-} from '../../redux/slices/lessonContentSlice';
+} from '../../redux/slices/Lessoncontentslice.js';
 import { deriveAssetsFromMapItems, mergeAssetLists, extractCharacterConfig } from '../utils/mapCalculations.js';
 
 export const useMapData = () => {
