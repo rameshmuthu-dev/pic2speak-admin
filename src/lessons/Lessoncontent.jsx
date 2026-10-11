@@ -9,7 +9,7 @@ import {
   selectAllLessonMasters,
   selectLessonMasterStatus,
   selectLessonMasterActionStatus as selectLessonActionStatus,
-} from '../redux/slices/lessonMasterSlice';
+} from '../redux/slices/Lessonmasterslice';
 import {
   fetchLessonContentsByLesson,
   createLessonContent,
@@ -19,7 +19,7 @@ import {
   selectLessonContentError,
   clearLessonContentError,
   resetLessonContentItems,
-} from '../redux/slices/lessonContentSlice';
+} from '../redux/slices/Lessoncontentslice';
 import {
   fetchLanguages,
   selectActiveLanguages,

@@ -11,11 +11,11 @@ import assetGroupReducer from './slices/Assetgroupslice'; // Adjust path if need
 
 
 import languagesReducer from './slices/Languagesslice';
-import lessonsReducer from './slices/lessonsSlice';
+import lessonsReducer from './slices/Lessonsslice';
 
-import lessonMasterReducer from './slices/lessonMasterSlice';
-import lessonContentReducer from './slices/lessonContentSlice';
-import lessonNodeReducer from './slices/lessonNodeSlice';
+import lessonMasterReducer from './slices/Lessonmasterslice';
+import lessonContentReducer from './slices/Lessoncontentslice';
+import lessonNodeReducer from './slices/Lessonnodeslice';
 import sceneReducer from './slices/sceneSlice';
 import sceneContentReducer from './slices/sceneContentSlice';
 /**

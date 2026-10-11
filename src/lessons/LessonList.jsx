@@ -13,8 +13,8 @@ import {
   selectLessonMasterActionStatus,
   selectLessonMasterError,
   clearLessonMasterError
-} from '../redux/slices/lessonMasterSlice';
-import { fetchLessonContents, selectAllLessonContents } from '../redux/slices/lessonContentSlice';
+} from '../redux/slices/Lessonmasterslice';
+import { fetchLessonContents, selectAllLessonContents } from '../redux/slices/Lessoncontentslice';
 import { fetchScenes, selectAllScenes } from '../redux/slices/sceneSlice';
 import { fetchLanguages, selectActiveLanguageId } from '../redux/slices/Languagesslice';
 

@@ -12,10 +12,10 @@ import {
   selectDraftMap,
   selectPublishedMap,
   selectAdventureMapStatus,
-} from '../redux/slices/adventureMapSlice';
+} from '../redux/slices/Adventuremapslice.js';
 import {
   createAssetGroup,
-} from '../redux/slices/assetGroupSlice';
+} from '../redux/slices/Assetgroupslice.js';
 import {
   fetchLanguages,
   setActiveLanguageCode,
@@ -25,11 +25,11 @@ import {
 } from '../redux/slices/Languagesslice';
 import {
   selectAllLessonMasters,
-} from '../redux/slices/lessonMasterSlice';
+} from '../redux/slices/Lessonmasterslice.js';
 import {
   fetchLessonContents,
   selectAllLessonContents,
-} from '../redux/slices/lessonContentSlice';
+} from '../redux/slices/Lessoncontentslice.js';
 
 import MapStage from './components/canvas/MapStage.jsx';
 import WalkingCharacter from './components/canvas/WalkingCharacter.jsx';
