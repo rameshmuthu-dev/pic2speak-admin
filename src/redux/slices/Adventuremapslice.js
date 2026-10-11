@@ -104,6 +104,7 @@ const initialState = {
     customThemes: {},
     mapItems: [],
     roadPaths: [],
+    customAssets: [],
     languagesList: [],
   },
 

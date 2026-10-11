@@ -36,7 +36,7 @@ const CanvasItem = React.memo(({
     }
   }, [isSelected, isPreview]);
 
-  const canInteract = !isPreview && !isHidden && isLayerActive;
+  const canInteract = !isPreview && !isHidden && (isLayerActive || activeTool === 'Delete');
 
   return (
     <Group

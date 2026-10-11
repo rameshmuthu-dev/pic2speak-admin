@@ -1,21 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Transformer } from 'react-konva';
 
 import {
-  fetchDraftMap,
   saveDraftMap,
-  saveMapAssets,
   publishMap,
-  fetchPublishedMap,
-  selectDraftMap,
-  selectPublishedMap,
   selectAdventureMapStatus,
 } from '../redux/slices/Adventuremapslice.js';
-import {
-  createAssetGroup,
-} from '../redux/slices/Assetgroupslice.js';
 import {
   fetchLanguages,
   setActiveLanguageCode,
@@ -26,8 +17,8 @@ import {
 import {
   selectAllLessonMasters,
 } from '../redux/slices/Lessonmasterslice.js';
+import { createAssetGroup } from '../redux/slices/Assetgroupslice.js';
 import {
-  fetchLessonContents,
   selectAllLessonContents,
 } from '../redux/slices/Lessoncontentslice.js';
 
@@ -42,7 +33,6 @@ import CategoryModal from './components/modals/CategoryModal.jsx';
 import PreviewModal from './components/modals/PreviewModal.jsx';
 
 import { useMapData } from './hooks/useMapData.js';
-import { useMapAutosave } from './hooks/useMapAutosave.js';
 import { useWalkingAnimation } from './hooks/useWalkingAnimation.js';
 import { useResponsiveContainer } from './hooks/useResponsiveContainer.js';
 import { useRoadPath } from './hooks/useRoadPath.js';
@@ -53,6 +43,7 @@ import { getLanguageMapProgress } from './utils/mapCalculations.js';
 import { isCharacterType } from './utils/mapCalculations.js';
 import { sameCategory } from './utils/mapCalculations.js';
 import { extractCharacterConfig } from './utils/mapCalculations.js';
+import { cloneSerializable, createMapSnapshot, snapshotsEqual } from './utils/editorState.js';
 
 const BASE_WIDTH = 800;
 const defaultBgData = {
@@ -76,6 +67,7 @@ const AdminBuilder = ({ onManageLanguages }) => {
   const languages = useSelector(selectActiveLanguages);
   const activeLanguage = useSelector(selectActiveLanguageCode);
   const languagesStatus = useSelector(selectLanguagesStatus);
+  const adventureMapStatus = useSelector(selectAdventureMapStatus);
 
   const handleManageLanguages = useCallback(() => {
     if (onManageLanguages) {
@@ -97,10 +89,13 @@ const AdminBuilder = ({ onManageLanguages }) => {
   const [lockAspect, setLockAspect] = useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [committedMapItems, setCommittedMapItems] = useState([]);
   const [committedRoadPaths, setCommittedRoadPaths] = useState([]);
   const [characterConfig, setCharacterConfig] = useState(null);
-  const hasCommittedInitialRef = useRef(false);
+  const [customAssetsList, setCustomAssetsList] = useState([]);
+  const [customCategories, setCustomCategories] = useState([]);
+  const [savedSnapshot, setSavedSnapshot] = useState(null);
+  const editSnapshotRef = useRef(null);
+  const saveRequestRef = useRef(0);
   const [mapItems, setMapItems] = useState([]);
   const [roadPaths, setRoadPaths] = useState([]);
   const [bgSections, setBgSections] = useState([
@@ -128,14 +123,12 @@ const AdminBuilder = ({ onManageLanguages }) => {
   const trRef = useRef(null);
   const stageRef = useRef(null);
 
-  const { isDataLoaded, customAssetsList, setCustomAssetsList, initializeData, saveCustomAssets } = useMapData();
+  const { isDataLoaded, loadError, initializeData } = useMapData();
   const { uploadFileToServer, loadImageNaturalSize, fitAssetDimensions } = useAssetUpload(dispatch);
-  const { containerWidth, containerHeight, scale } = useResponsiveContainer(responsiveContainerRef, isDataLoaded);
+  const { containerWidth, scale } = useResponsiveContainer(responsiveContainerRef, isDataLoaded);
   const { selectedRoadId, setSelectedRoadId, selectedPointIndex, setSelectedPointIndex, activeRoad, handleUndoLastPoint, handleSelectNextPoint, handleStageClick, handleUpdateRoadProperty, handleUpdatePoint, handleDeletePoint, handleDeleteRoad } = useRoadPath(roadPaths, setRoadPaths, activeTool, activeLayer, scale);
   const { lessonOptions, handleSelectLessonForCard } = useLessonCard(lessonMasters, lessonContents, activeLanguage, mapItems, setMapItems);
-  const { isWalking, walkFrameIndex, walkKey, walkSegmentIndex, walkPoints, walkFrom, walkTo, walkChainCurve, walkCurveXs, walkCurveYs, walkSegmentDuration, walkFacingLeft, isAtFinalStop, currentWalkStopNumber, totalWalkStops, currentWalkImageSrc, walkerScaledWidth, walkerScaledHeight, hasWalkFrames, handleTestWalk, handleAnimationComplete } = useWalkingAnimation(mapItems, roadPaths, selectedRoadId, committedRoadPaths, scale, activeLanguage);
-
-  useMapAutosave(isDataLoaded, mapTitle, mapActive, bgSections, customThemes, mapItems, roadPaths);
+  const { isWalking, walkFrameIndex, walkKey, walkPoints, walkCurveXs, walkCurveYs, walkSegmentDuration, walkFacingLeft, isAtFinalStop, currentWalkStopNumber, totalWalkStops, hasWalkFrames, stopWalking, handleTestWalk, handleAnimationComplete } = useWalkingAnimation(mapItems, roadPaths, selectedRoadId, committedRoadPaths, scale, activeLanguage);
 
   useEffect(() => {
     if (languagesStatus === 'idle') {
@@ -149,24 +142,67 @@ const AdminBuilder = ({ onManageLanguages }) => {
     }
   }, [languages, activeLanguage, dispatch]);
 
-  useEffect(() => {
-    void initializeData(setCustomThemes, setMapActive, setMapTitle, setMapItems, setBgSections, setRoadPaths, setSelectedRoadId, setCharacterConfig);
-  }, [initializeData]);
+  const workingSnapshot = useMemo(() => createMapSnapshot({
+    mapTitle,
+    mapActive,
+    bgSections,
+    customThemes,
+    mapItems,
+    roadPaths,
+    characterConfig,
+    customAssets: customAssetsList,
+    categories: customCategories
+  }), [mapTitle, mapActive, bgSections, customThemes, mapItems, roadPaths, characterConfig, customAssetsList, customCategories]);
 
-  useEffect(() => {
-    if (isDataLoaded && !hasCommittedInitialRef.current) {
-      setCommittedMapItems(mapItems);
-      setCommittedRoadPaths(roadPaths);
-      hasCommittedInitialRef.current = true;
+  const hasUnsavedChanges = Boolean(savedSnapshot) && !snapshotsEqual(workingSnapshot, savedSnapshot);
+
+  const restoreSnapshot = useCallback((snapshot) => {
+    if (!snapshot) return;
+
+    const restoredMapItems = cloneSerializable(snapshot.mapItems) || [];
+    const restoredRoadPaths = cloneSerializable(snapshot.roadPaths) || [];
+    setMapTitle(snapshot.mapTitle ?? 'Adventure Map');
+    setMapActive(snapshot.mapActive ?? true);
+    setBgSections(cloneSerializable(snapshot.bgSections) || []);
+    setCustomThemes(cloneSerializable(snapshot.customThemes) || {});
+    setMapItems(restoredMapItems);
+    setRoadPaths(restoredRoadPaths);
+    setCharacterConfig(cloneSerializable(snapshot.characterConfig));
+    setCustomAssetsList(cloneSerializable(snapshot.customAssets) || []);
+    setCustomCategories(cloneSerializable(snapshot.categories) || []);
+    setCommittedRoadPaths(restoredRoadPaths);
+    setSelectedId(null);
+    setSelectedRoadId(restoredRoadPaths[0]?.id || null);
+    setSelectedPointIndex(null);
+    setActiveTool('Select');
+    setActiveLayer('All Layers');
+    setSelectedThemeKey(Object.keys(snapshot.customThemes || {})[0] || 'rich_grass_green');
+    stopWalking();
+    setIsModalOpen(false);
+    setIsBgModalOpen(false);
+    setIsCategoryModalOpen(false);
+    setIsPreviewOpen(false);
+    if (trRef.current) {
+      trRef.current.nodes([]);
+      trRef.current.getLayer()?.batchDraw();
     }
-  }, [isDataLoaded]);
+    editSnapshotRef.current = null;
+    saveRequestRef.current += 1;
+    setIsEditMode(false);
+  }, [setCustomAssetsList, setSelectedPointIndex, setSelectedRoadId, stopWalking]);
 
   useEffect(() => {
-    void saveCustomAssets(customAssetsList);
-  }, [customAssetsList, saveCustomAssets]);
+    let current = true;
+    void initializeData((snapshot) => {
+      restoreSnapshot(snapshot);
+      setSavedSnapshot(cloneSerializable(snapshot));
+    }, () => current);
+    return () => { current = false; };
+  }, [initializeData, restoreSnapshot]);
 
   useEffect(() => {
     if (!trRef.current || !stageRef.current) return;
+    trRef.current.nodes([]);
     const selectedMapItem = mapItems.find((item) => item.id === selectedId);
     if (selectedId && selectedMapItem?.type !== 'Lesson Cards' && (activeTool === 'Select' || activeTool === 'Move')) {
       const stageNode = stageRef.current.getStage();
@@ -175,15 +211,16 @@ const AdminBuilder = ({ onManageLanguages }) => {
         trRef.current.nodes([selectedNode]);
         const layer = trRef.current.getLayer();
         if (layer) layer.batchDraw();
-      } else {
-        trRef.current.nodes([]);
       }
-    } else {
-      trRef.current.nodes([]);
     }
+    trRef.current.getLayer()?.batchDraw();
   }, [selectedId, activeTool, mapItems]);
 
-  const categoriesList = useMemo(() => assetGroups.map((g) => g.name), [assetGroups]);
+  const categoriesList = useMemo(() => [...new Set([
+    ...assetGroups.map((g) => g.name),
+    ...customCategories,
+    ...customAssetsList.map((asset) => asset.type)
+  ])], [assetGroups, customCategories, customAssetsList]);
   const selectedItem = mapItems.find((item) => item.id === selectedId);
   const { visibleBuildingIds, visibleHeight } = getLanguageMapProgress(mapItems, activeLanguage);
 
@@ -191,15 +228,13 @@ const AdminBuilder = ({ onManageLanguages }) => {
     (acc, sec) => acc + Math.max(1, Number(sec.height) || 0),
     0
   );
-  const stageHeight = totalStageHeight * scale;
+  const stageHeight = Math.max(800, totalStageHeight) * scale;
 
   const lastSectionTheme = bgSections.length
     ? customThemes[bgSections[bgSections.length - 1].themeKey]
     : null;
   const fallbackBgColor = lastSectionTheme?.color || '#599824';
 
-  const previewVisibleObjectItems = mapItems.filter((item) => item.type !== 'Lesson Cards');
-  const previewVisibleLessonCards = mapItems.filter((item) => item.type === 'Lesson Cards');
   const previewStageHeight = Math.max(600, visibleHeight || 600);
 
   const publishedSlotsForActiveLang = visibleBuildingIds.size;
@@ -209,13 +244,18 @@ const AdminBuilder = ({ onManageLanguages }) => {
     setSelectedId(item.id);
     setActiveLayer(item.type || 'Buildings');
     setActiveTool('Select');
+    setIsLeftPanelOpen(false);
     setIsRightPanelOpen(true);
   }, []);
 
   const handleDeleteItem = useCallback((id) => {
     setMapItems((prev) => prev.filter((item) => item.id !== id));
-    if (selectedId === id) setSelectedId(null);
-  }, [selectedId]);
+    setSelectedId((currentId) => currentId === id ? null : currentId);
+    if (trRef.current) {
+      trRef.current.nodes([]);
+      trRef.current.getLayer()?.batchDraw();
+    }
+  }, []);
 
   const handleCloneItem = useCallback((id) => {
     setMapItems((prev) => {
@@ -339,7 +379,7 @@ const AdminBuilder = ({ onManageLanguages }) => {
 
   const handleDeleteCustomAsset = useCallback((id) => {
     setCustomAssetsList((prev) => prev.filter((asset) => asset.id !== id));
-  }, []);
+  }, [setCustomAssetsList]);
 
   const handleDeleteBackgroundTheme = useCallback((key) => {
     setCustomThemes((prev) => {
@@ -379,7 +419,7 @@ const AdminBuilder = ({ onManageLanguages }) => {
     setBgSections((prev) => {
       const filtered = prev.filter((sec) => sec.id !== id);
       let yOffset = 0;
-      return filtered.map((sec, idx) => {
+      return filtered.map((sec) => {
         const updated = { ...sec, y: yOffset };
         yOffset += sec.height;
         return updated;
@@ -395,7 +435,7 @@ const AdminBuilder = ({ onManageLanguages }) => {
     if (!activeRoad) return;
     setRoadPaths((prev) => prev.map((p) => (p.id === activeRoad.id ? { ...p, points: [] } : p)));
     setSelectedPointIndex(null);
-  }, [activeRoad]);
+  }, [activeRoad, setSelectedPointIndex]);
 
   const handleAddWalkFrame = useCallback((id, urls) => {
     setMapItems((prev) => prev.map((item) => {
@@ -419,28 +459,59 @@ const AdminBuilder = ({ onManageLanguages }) => {
     setMapItems((prev) => prev.map((item) => (item.id === id ? { ...item, stepSound: '' } : item)));
   }, []);
 
-  const handleSaveMapChanges = async () => {
-    const payload = {
-      mapTitle,
-      mapActive,
-      bgSections,
-      customThemes,
-      mapItems,
-      roadPaths,
-      characterConfig: extractCharacterConfig(mapItems, committedMapItems),
-      updatedAt: new Date().toISOString()
-    };
+  const isSaving = adventureMapStatus.save === 'loading' || adventureMapStatus.publish === 'loading';
+
+  const buildSavePayload = useCallback(() => ({
+    mapTitle,
+    mapActive,
+    bgSections,
+    customThemes,
+    mapItems,
+    roadPaths,
+    customAssets: customAssetsList,
+    categories: customCategories,
+    languagesList: languages,
+    characterConfig: extractCharacterConfig(mapItems, mapItems),
+    updatedAt: new Date().toISOString()
+  }), [mapTitle, mapActive, bgSections, customThemes, mapItems, roadPaths, customAssetsList, customCategories, languages]);
+
+  const commitSavedState = useCallback((payload) => {
+    const nextSnapshot = createMapSnapshot({
+      mapTitle: payload.mapTitle,
+      mapActive: payload.mapActive,
+      bgSections: payload.bgSections,
+      customThemes: payload.customThemes,
+      mapItems: payload.mapItems,
+      roadPaths: payload.roadPaths,
+      characterConfig: payload.characterConfig,
+      customAssets: payload.customAssets,
+      categories: payload.categories
+    });
+    setCommittedRoadPaths(cloneSerializable(payload.roadPaths) || []);
+    setCharacterConfig(cloneSerializable(payload.characterConfig));
+    setSavedSnapshot(nextSnapshot);
+    editSnapshotRef.current = null;
+    stopWalking();
+    setIsEditMode(false);
+  }, [stopWalking]);
+
+  const handleSaveMapChanges = useCallback(async () => {
+    if (!isDataLoaded || isSaving) return false;
+    const requestId = ++saveRequestRef.current;
+    const payload = buildSavePayload();
     try {
       await dispatch(saveDraftMap(payload)).unwrap();
-      setCommittedMapItems(mapItems);
-      setCommittedRoadPaths(roadPaths);
-      setCharacterConfig(payload.characterConfig);
-      setIsEditMode(false);
+      if (requestId !== saveRequestRef.current) return false;
+      commitSavedState(payload);
       alert("Adventure Map draft & Road paths saved successfully!");
+      return true;
     } catch (error) {
-      alert("Error saving data to the server: " + (error?.message || error));
+      if (requestId === saveRequestRef.current) {
+        alert("Error saving data to the server: " + (error?.message || error));
+      }
+      return false;
     }
-  };
+  }, [buildSavePayload, commitSavedState, dispatch, isDataLoaded, isSaving]);
 
   const handleOpenPreview = useCallback(() => {
     setPreviewMapItems([...mapItems]);
@@ -451,27 +522,20 @@ const AdminBuilder = ({ onManageLanguages }) => {
   }, [mapItems, roadPaths, bgSections, customThemes]);
 
   const handlePublishMap = async () => {
-    const payload = {
-      mapTitle,
-      mapActive,
-      bgSections,
-      customThemes,
-      mapItems,
-      roadPaths,
-      characterConfig: extractCharacterConfig(mapItems, committedMapItems),
-      updatedAt: new Date().toISOString()
-    };
+    if (isSaving) return;
+    const requestId = ++saveRequestRef.current;
+    const payload = buildSavePayload();
     try {
       await dispatch(saveDraftMap(payload)).unwrap();
       await dispatch(publishMap()).unwrap();
-      setCommittedMapItems(mapItems);
-      setCommittedRoadPaths(roadPaths);
-      setCharacterConfig(payload.characterConfig);
-      setIsEditMode(false);
+      if (requestId !== saveRequestRef.current) return;
+      commitSavedState(payload);
       alert("Adventure Map with Roads & Buildings successfully PUBLISHED!");
       setIsPreviewOpen(false);
     } catch (error) {
-      alert("Error publishing data: " + (error?.message || error));
+      if (requestId === saveRequestRef.current) {
+        alert("Error publishing data: " + (error?.message || error));
+      }
     }
   };
 
@@ -604,15 +668,17 @@ const AdminBuilder = ({ onManageLanguages }) => {
     }
   };
 
-  const handleCreateNewCategory = async (e) => {
+  const handleCreateNewCategory = (e) => {
     e.preventDefault();
-    try {
-      await dispatch(createAssetGroup({ name: newCategoryName })).unwrap();
+    const name = newCategoryName.trim();
+    if (!name || categoriesList.some((category) => sameCategory(category, name))) return;
+    dispatch(createAssetGroup(name)).unwrap().then(() => {
+      setCustomCategories((previous) => [...previous, name]);
       setNewCategoryName('');
       setIsCategoryModalOpen(false);
-    } catch (err) {
-      alert("Could not create category: " + (err?.response?.data?.message || err.message));
-    }
+    }).catch((error) => {
+      alert("Could not create category: " + (error?.message || error));
+    });
   };
 
   const handleClearAll = useCallback(() => {
@@ -624,7 +690,7 @@ const AdminBuilder = ({ onManageLanguages }) => {
       setSelectedRoadId(null);
       setSelectedPointIndex(null);
     }
-  }, []);
+  }, [setMapItems, setRoadPaths, setSelectedId, setSelectedPointIndex, setSelectedRoadId]);
 
   const handleStageClickWrapper = useCallback((e) => {
     const result = handleStageClick(e, stageRef);
@@ -634,8 +700,7 @@ const AdminBuilder = ({ onManageLanguages }) => {
   }, [handleStageClick]);
 
   const handleDragPoint = useCallback((index, x, y) => {
-    handleUpdatePoint(index, 'x', x);
-    handleUpdatePoint(index, 'y', y);
+    handleUpdatePoint(index, { x, y });
   }, [handleUpdatePoint]);
 
   const handleTestWalkWrapper = useCallback(() => {
@@ -651,14 +716,102 @@ const AdminBuilder = ({ onManageLanguages }) => {
 
   const canvasMapItems = isWalking ? mapItems.filter((item) => !isCharacterType(item.type)) : mapItems;
 
+  const handleToggleEditMode = useCallback(() => {
+    if (!isEditMode) {
+      editSnapshotRef.current = cloneSerializable(savedSnapshot || workingSnapshot);
+      setIsEditMode(true);
+      return;
+    }
+
+    if (hasUnsavedChanges) {
+      const shouldDiscard = confirm('Discard your unsaved Adventure Map changes?');
+      if (!shouldDiscard) return;
+      restoreSnapshot(editSnapshotRef.current || savedSnapshot);
+      return;
+    }
+
+    editSnapshotRef.current = null;
+    setIsEditMode(false);
+  }, [hasUnsavedChanges, isEditMode, restoreSnapshot, savedSnapshot, workingSnapshot]);
+
+  const canLeaveEditor = useCallback(() => {
+    if (!isEditMode || !hasUnsavedChanges) return true;
+    return confirm('Leave the Adventure Map editor and discard unsaved changes?');
+  }, [hasUnsavedChanges, isEditMode]);
+
+  const handleManageLanguagesWithGuard = useCallback(() => {
+    if (canLeaveEditor()) handleManageLanguages();
+  }, [canLeaveEditor, handleManageLanguages]);
+
+  const handleLanguageChange = useCallback((languageCode) => {
+    // Language selection changes the editor view; it does not navigate away
+    // and therefore must not discard the current draft.
+    dispatch(setActiveLanguageCode(languageCode));
+  }, [dispatch]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (!isEditMode || !hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, isEditMode]);
+
+  useEffect(() => {
+    if (!isEditMode || !hasUnsavedChanges) return undefined;
+
+    const handleInternalNavigation = (event) => {
+      const link = event.target.closest?.('a[href]');
+      const button = event.target.closest?.('button');
+      const isLogout = button?.textContent?.includes('Logout');
+      if ((!link || link.target === '_blank' || link.hasAttribute('download')) && !isLogout) return;
+      if (!canLeaveEditor()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    document.addEventListener('click', handleInternalNavigation, true);
+    return () => document.removeEventListener('click', handleInternalNavigation, true);
+  }, [canLeaveEditor, hasUnsavedChanges, isEditMode]);
+
+  const closeAllPanels = useCallback(() => {
+    setIsLeftPanelOpen(false);
+    setIsRightPanelOpen(false);
+  }, []);
+
+  // Only one drawer at a time on mobile / tablet
+  const toggleLeftPanel = useCallback(() => {
+    setIsLeftPanelOpen((open) => !open);
+    setIsRightPanelOpen(false);
+  }, []);
+
+  const toggleRightPanel = useCallback(() => {
+    setIsRightPanelOpen((open) => !open);
+    setIsLeftPanelOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isLeftPanelOpen && !isRightPanelOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') closeAllPanels();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isLeftPanelOpen, isRightPanelOpen, closeAllPanels]);
+
   if (!isDataLoaded) {
-    return <div className="flex items-center justify-center h-screen text-slate-500">Loading map data...</div>;
+    return <div role={loadError ? 'alert' : 'status'} className="flex items-center justify-center h-screen text-slate-500">
+      {loadError ? `Unable to load the map: ${loadError}. Reload to try again.` : 'Loading map data...'}
+    </div>;
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-100 font-sans overflow-hidden text-slate-800 relative w-full">
+    <div className="flex flex-col h-screen supports-[height:100dvh]:h-[100dvh] bg-slate-100 font-sans overflow-hidden text-slate-800 relative w-full">
       <MapBuilderHeader
-        activeTool={activeTool}
         languages={languages}
         activeLanguage={activeLanguage}
         publishedSlotsForActiveLang={publishedSlotsForActiveLang}
@@ -671,26 +824,27 @@ const AdminBuilder = ({ onManageLanguages }) => {
         currentWalkStopNumber={currentWalkStopNumber}
         totalWalkStops={totalWalkStops}
         isEditMode={isEditMode}
-        onManageLanguages={handleManageLanguages}
-        onToggleLeftPanel={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
-        onToggleRightPanel={() => setIsRightPanelOpen(!isRightPanelOpen)}
+         isSaving={isSaving}
+         onManageLanguages={handleManageLanguagesWithGuard}
+         onLanguageChange={handleLanguageChange}
+        onToggleLeftPanel={toggleLeftPanel}
+        onToggleRightPanel={toggleRightPanel}
         onTestWalk={handleTestWalkWrapper}
         onOpenPreview={handleOpenPreview}
-        onToggleEditMode={() => setIsEditMode(!isEditMode)}
+         onToggleEditMode={handleToggleEditMode}
         onSave={handleSaveMapChanges}
       />
 
-      <div className="flex-1 flex flex-col lg:grid lg:grid-cols-[320px_1fr_320px] overflow-hidden w-full relative">
-        <div className={`fixed lg:relative inset-y-0 left-0 z-40 w-full max-w-xs sm:w-80 lg:w-auto bg-white border-r border-slate-200 p-4 overflow-y-auto flex flex-col justify-between transition-transform duration-200 ${isLeftPanelOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${!isEditMode ? 'opacity-60 pointer-events-none select-none' : ''}`}>
-          <div className="flex items-center justify-between pb-3 mb-2 lg:hidden border-b border-slate-100">
-            <h3 className="text-sm font-bold text-slate-800">Path Tools & Assets</h3>
-            <button onClick={() => setIsLeftPanelOpen(false)} className="text-slate-500 font-bold p-1">✕</button>
-          </div>
-          {!isEditMode && (
-            <div className="mb-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold lg:hidden">
-              Click "Edit" to make changes
-            </div>
-          )}
+      <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-[320px_minmax(0,1fr)_320px] overflow-hidden w-full relative">
+        <aside
+          aria-hidden={!isLeftPanelOpen}
+          className={`fixed lg:relative inset-y-0 left-0 z-[55] lg:z-auto w-[88%] max-w-sm sm:w-80 lg:w-auto bg-white border-r border-slate-200 flex flex-col min-h-0 overflow-hidden transition-transform duration-200 ${isLeftPanelOpen ? 'translate-x-0 shadow-2xl lg:shadow-none' : '-translate-x-full pointer-events-none lg:pointer-events-auto'} lg:translate-x-0`}
+        >
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+            <div className="relative min-h-full p-4 flex flex-col justify-between">
+              {!isEditMode && (
+                <div aria-hidden="true" className="absolute inset-x-0 bottom-0 top-14 lg:top-0 z-10 lg:bg-white/40 cursor-not-allowed" />
+              )}
           <LeftSidebar
             isOpen={isLeftPanelOpen}
             isEditMode={isEditMode}
@@ -714,15 +868,15 @@ const AdminBuilder = ({ onManageLanguages }) => {
             onUpdateRoadColor={(c) => handleUpdateRoadProperty('color', c)}
             onClearRoadPoints={handleClearRoadPoints}
             onDeleteRoad={handleDeleteRoad}
-            onOpenBgModal={() => setIsBgModalOpen(true)}
+            onOpenBgModal={() => { setIsLeftPanelOpen(false); setIsBgModalOpen(true); }}
             onDeleteTheme={handleDeleteBackgroundTheme}
             onAddBgSection={handleAddNewBackgroundSection}
             onRemoveBgSection={handleRemoveBackgroundSection}
             onChangeSectionTheme={handleChangeSectionTheme}
             onAddLessonCard={handleAddLessonCard}
             onSetAllLayers={() => setActiveLayer('All Layers')}
-            onOpenCategoryModal={() => setIsCategoryModalOpen(true)}
-            onOpenAssetModal={(cat) => { setTargetCategory(cat); setIsModalOpen(true); }}
+            onOpenCategoryModal={() => { setIsLeftPanelOpen(false); setIsCategoryModalOpen(true); }}
+            onOpenAssetModal={(cat) => { setTargetCategory(cat); setIsLeftPanelOpen(false); setIsModalOpen(true); }}
             onAddAssetToMap={handleAddAssetToMap}
             onDeleteAsset={handleDeleteCustomAsset}
             onScrollAssetRow={handleScrollAssetRow}
@@ -730,14 +884,16 @@ const AdminBuilder = ({ onManageLanguages }) => {
             setActiveTool={setActiveTool}
             setIsRightPanelOpen={setIsRightPanelOpen}
           />
-        </div>
+            </div>
+          </div>
+        </aside>
 
         {isLeftPanelOpen && (
-          <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setIsLeftPanelOpen(false)}></div>
+          <div className="fixed inset-0 bg-black/40 z-[54] lg:hidden touch-none overscroll-none" onClick={() => setIsLeftPanelOpen(false)}></div>
         )}
 
-        <div className="bg-slate-100 p-2 md:p-4 flex flex-col items-stretch relative overflow-hidden w-full h-full flex-1">
-          <div className="flex-1 relative overflow-y-auto overflow-x-hidden" ref={responsiveContainerRef}>
+        <div className="bg-slate-100 p-0 md:p-4 flex flex-col items-stretch relative overflow-hidden w-full min-w-0 h-full flex-1">
+          <div className="flex-1 min-h-0 w-full relative overflow-y-auto overflow-x-hidden" ref={responsiveContainerRef}>
             <MapStage
               stageRef={stageRef}
               trRef={trRef}
@@ -747,9 +903,10 @@ const AdminBuilder = ({ onManageLanguages }) => {
               isEditMode={isEditMode}
               bgSections={bgSections}
               customThemes={customThemes}
-              roadPaths={roadPaths}
-              mapItems={canvasMapItems}
-              activeTool={activeTool}
+               roadPaths={roadPaths}
+               mapItems={canvasMapItems}
+               activeLanguage={activeLanguage}
+               activeTool={activeTool}
               activeLayer={activeLayer}
               selectedId={selectedId}
               selectedPointIndex={selectedPointIndex}
@@ -790,16 +947,15 @@ const AdminBuilder = ({ onManageLanguages }) => {
           </div>
         </div>
 
-        <div className={`fixed lg:relative inset-y-0 right-0 z-40 w-full max-w-xs sm:w-80 lg:w-auto bg-white border-l border-slate-200 p-4 overflow-y-auto flex flex-col justify-between transition-transform duration-200 ${isRightPanelOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'} ${!isEditMode ? 'opacity-60 pointer-events-none select-none' : ''}`}>
-          <div className="flex items-center justify-between pb-3 mb-2 lg:hidden border-b border-slate-100">
-            <h3 className="text-sm font-bold text-slate-800">Properties</h3>
-            <button onClick={() => setIsRightPanelOpen(false)} className="text-slate-500 font-bold p-1">✕</button>
-          </div>
-          {!isEditMode && (
-            <div className="mb-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold lg:hidden">
-              Click "Edit" to make changes
-            </div>
-          )}
+        <aside
+          aria-hidden={!isRightPanelOpen}
+          className={`fixed lg:relative inset-y-0 right-0 z-[55] lg:z-auto w-[88%] max-w-sm sm:w-80 lg:w-auto bg-white border-l border-slate-200 flex flex-col min-h-0 overflow-hidden transition-transform duration-200 ${isRightPanelOpen ? 'translate-x-0 shadow-2xl lg:shadow-none' : 'translate-x-full pointer-events-none lg:pointer-events-auto'} lg:translate-x-0`}
+        >
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+            <div className="relative min-h-full p-4 flex flex-col justify-between">
+              {!isEditMode && (
+                <div aria-hidden="true" className="absolute inset-x-0 bottom-0 top-14 lg:top-0 z-10 lg:bg-white/40 cursor-not-allowed" />
+              )}
           <RightSidebar
             isOpen={isRightPanelOpen}
             isEditMode={isEditMode}
@@ -833,10 +989,12 @@ const AdminBuilder = ({ onManageLanguages }) => {
             onToggleMapActive={() => setMapActive(!mapActive)}
             onClearAll={handleClearAll}
           />
-        </div>
+            </div>
+          </div>
+        </aside>
 
         {isRightPanelOpen && (
-          <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setIsRightPanelOpen(false)}></div>
+          <div className="fixed inset-0 bg-black/40 z-[54] lg:hidden touch-none overscroll-none" onClick={() => setIsRightPanelOpen(false)}></div>
         )}
       </div>
 

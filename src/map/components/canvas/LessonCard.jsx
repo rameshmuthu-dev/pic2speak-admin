@@ -4,13 +4,15 @@ import { getItemContent } from '../../utils/languageUtils.js';
 
 const LessonCard = React.memo(({ 
   item, 
-  slotNumber, 
   activeLanguage, 
+  activeTool,
+  isLayerActive = true,
   isSelected, 
   isPreview, 
   onSelect, 
   onCardDragEnd, 
-  onDelete 
+  onDelete,
+  onClone
 }) => {
   const langContent = getItemContent(item, activeLanguage);
   const title = langContent?.title || '';
@@ -18,18 +20,23 @@ const LessonCard = React.memo(({
   const displayText = title || 'Untitled lesson';
   const cardWidth = item.width || 154;
   const cardHeight = item.height || 72;
+  const canInteract = !isPreview && isLayerActive;
 
   const handleDragEnd = (e) => {
-    if (isPreview) return;
+    if (!canInteract) return;
     if (onCardDragEnd) {
       onCardDragEnd(item.id, e.target.x(), e.target.y());
     }
   };
 
   const handleSelect = (e) => {
-    if (isPreview) return;
+    if (!canInteract) return;
     e.cancelBubble = true;
-    if (onSelect) {
+    if (activeTool === 'Delete') {
+      onDelete?.(item.id);
+    } else if (activeTool === 'Clone') {
+      onClone?.(item.id);
+    } else if (onSelect) {
       onSelect(item);
     }
   };
@@ -50,7 +57,8 @@ const LessonCard = React.memo(({
       id={`item-${item.id}`}
       x={item.x}
       y={item.y}
-      draggable={!isPreview}
+      listening={canInteract}
+      draggable={canInteract && (activeTool === 'Move' || activeTool === 'Select')}
       onClick={handleSelect}
       onTap={handleSelect}
       onDragEnd={handleDragEnd}

@@ -1,101 +1,48 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import {
-  fetchDraftMap,
-  saveMapAssets,
-  fetchPublishedMap,
-} from '../../redux/slices/Adventuremapslice.js';
-import {
-  fetchAssetGroups,
-} from '../../redux/slices/Assetgroupslice.js';
-import {
-  fetchLessonMasters,
-} from '../../redux/slices/Lessonmasterslice.js';
-import {
-  fetchLessonContents,
-} from '../../redux/slices/Lessoncontentslice.js';
-import { deriveAssetsFromMapItems, mergeAssetLists, extractCharacterConfig } from '../utils/mapCalculations.js';
+import { fetchDraftMap, fetchPublishedMap } from '../../redux/slices/Adventuremapslice.js';
+import { fetchAssetGroups } from '../../redux/slices/Assetgroupslice.js';
+import { fetchLessonMasters } from '../../redux/slices/Lessonmasterslice.js';
+import { fetchLessonContents } from '../../redux/slices/Lessoncontentslice.js';
+import { loadMapSnapshot } from '../utils/editorState.js';
 
 export const useMapData = () => {
   const dispatch = useDispatch();
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [customAssetsList, setCustomAssetsList] = useState([]);
+  const [loadError, setLoadError] = useState(null);
+  const initializationRef = useRef(null);
 
-  const initializeData = useCallback(async (setCustomThemes, setMapActive, setMapTitle, setMapItems, setBgSections, setRoadPaths, setSelectedRoadId, setCharacterConfig) => {
+  const initializeData = useCallback(async (onLoaded, isCurrent) => {
+    // StrictMode can mount effects twice. Reuse the requests and only hydrate
+    // the live effect, so a late load cannot overwrite an editing session.
+    if (!initializationRef.current) {
+      initializationRef.current = Promise.all([
+        dispatch(fetchDraftMap()).unwrap(),
+        dispatch(fetchAssetGroups()).unwrap().catch((error) => {
+          console.warn('Could not load asset groups:', error);
+          return null;
+        }),
+        dispatch(fetchLessonMasters()).unwrap().catch((error) => {
+          console.warn('Could not load lesson masters:', error);
+          return null;
+        }),
+        dispatch(fetchLessonContents()).unwrap().catch((error) => {
+          console.warn('Could not load lesson contents:', error);
+          return null;
+        }),
+        dispatch(fetchPublishedMap()).unwrap().catch(() => null)
+      ]);
+    }
     try {
-      try {
-        await dispatch(fetchAssetGroups()).unwrap();
-      } catch (err) {
-        console.warn('Could not load asset groups:', err);
-      }
-
-      try {
-        await dispatch(fetchLessonMasters()).unwrap();
-      } catch (err) {
-        console.warn('Could not load lesson masters:', err);
-      }
-
-      try {
-        await dispatch(fetchLessonContents()).unwrap();
-      } catch (err) {
-        console.warn('Could not load lesson contents:', err);
-      }
-
-      try {
-        const savedDraft = await dispatch(fetchDraftMap()).unwrap();
-        if (savedDraft) {
-          if (savedDraft.customThemes && Object.keys(savedDraft.customThemes).length > 0) setCustomThemes(savedDraft.customThemes);
-          if (savedDraft.mapActive !== undefined) setMapActive(savedDraft.mapActive);
-          if (savedDraft.mapTitle) setMapTitle(savedDraft.mapTitle);
-          if (Array.isArray(savedDraft.mapItems) && savedDraft.mapItems.length > 0) setMapItems(savedDraft.mapItems);
-          if (Array.isArray(savedDraft.bgSections) && savedDraft.bgSections.length > 0) setBgSections(savedDraft.bgSections);
-          if (Array.isArray(savedDraft.roadPaths) && savedDraft.roadPaths.length > 0) {
-            setRoadPaths(savedDraft.roadPaths);
-            setSelectedRoadId(savedDraft.roadPaths[0].id);
-          }
-
-          if (typeof setCharacterConfig === 'function') {
-            if (savedDraft.characterConfig) {
-              setCharacterConfig(savedDraft.characterConfig);
-            } else if (Array.isArray(savedDraft.mapItems)) {
-              setCharacterConfig(extractCharacterConfig(savedDraft.mapItems));
-            }
-          }
-
-          const savedAssets = Array.isArray(savedDraft.customAssets) ? savedDraft.customAssets : [];
-          const derivedAssets = deriveAssetsFromMapItems(savedDraft.mapItems);
-          const finalAssets = mergeAssetLists(savedAssets, derivedAssets);
-          if (finalAssets.length > 0) setCustomAssetsList(finalAssets);
-        }
-      } catch (err) {
-        console.warn('Could not load saved draft from backend:', err);
-      }
-
-      try {
-        await dispatch(fetchPublishedMap()).unwrap();
-      } catch (err) {
-        console.warn('Could not load published map from backend:', err);
-      }
-    } finally {
+      const [draft] = await initializationRef.current;
+      if (!isCurrent()) return;
+      if (!draft) throw new Error('The saved draft could not be loaded.');
+      onLoaded(loadMapSnapshot(draft));
       setIsDataLoaded(true);
+    } catch (error) {
+      if (isCurrent()) setLoadError(error?.message || String(error));
     }
   }, [dispatch]);
 
-  const saveCustomAssets = useCallback(async (assets) => {
-    if (isDataLoaded) {
-      const formData = new FormData();
-      formData.append('customAssets', JSON.stringify(assets));
-      dispatch(saveMapAssets(formData)).unwrap().catch((err) => {
-        console.warn('Could not save custom assets:', err);
-      });
-    }
-  }, [isDataLoaded, dispatch]);
-
-  return {
-    isDataLoaded,
-    customAssetsList,
-    setCustomAssetsList,
-    initializeData,
-    saveCustomAssets
-  };
+  return { isDataLoaded, loadError, initializeData };
 };

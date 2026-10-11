@@ -1,7 +1,6 @@
 import React from 'react';
 
 const MapBuilderHeader = ({
-  activeTool,
   languages,
   activeLanguage,
   publishedSlotsForActiveLang,
@@ -14,7 +13,9 @@ const MapBuilderHeader = ({
   currentWalkStopNumber,
   totalWalkStops,
   isEditMode,
+  isSaving,
   onManageLanguages,
+  onLanguageChange,
   onToggleLeftPanel,
   onToggleRightPanel,
   onTestWalk,
@@ -33,9 +34,7 @@ const MapBuilderHeader = ({
           </button>
           <select
             value={activeLanguage}
-            onChange={(e) => {
-              window.location.href = `/map-builder?lang=${e.target.value}`;
-            }}
+            onChange={(e) => onLanguageChange(e.target.value)}
             className="px-3 py-1.5 bg-white text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 cursor-pointer focus:outline-none focus:border-teal-500"
           >
             {languages.map((lang) => (
@@ -65,10 +64,10 @@ const MapBuilderHeader = ({
           👁️ Preview
         </button>
         <button onClick={onToggleEditMode} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer shrink-0 ${isEditMode ? 'bg-teal-600 text-white border-teal-600' : 'bg-slate-200 text-slate-700 border-slate-300'}`}>
-          {isEditMode ? '✏️ Edit' : '👁️ View'}
+          {isEditMode ? '↩️ Cancel' : '👁️ View'}
         </button>
-        <button onClick={onSave} className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold border border-teal-700 cursor-pointer shadow-md shadow-teal-600/20 shrink-0">
-          Save
+        <button onClick={onSave} disabled={isSaving || !isEditMode} className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:border-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold border border-teal-700 cursor-pointer shadow-md shadow-teal-600/20 shrink-0">
+          {isSaving ? 'Saving…' : 'Save'}
         </button>
       </div>
     </header>

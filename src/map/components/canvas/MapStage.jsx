@@ -1,11 +1,16 @@
+
 import React from 'react';
 import { Stage, Layer, Group, Rect, Transformer } from 'react-konva';
+
 import BackgroundSection from './BackgroundSection.jsx';
 import CanvasItem from './CanvasItem.jsx';
 import LessonCard from './LessonCard.jsx';
 import RoadPath from './RoadPath.jsx';
 import RoadPoint from './RoadPoint.jsx';
+
 import { isCharacterType } from '../../utils/mapCalculations.js';
+
+const BACKGROUND_NAMES = ['bg-image', 'bg-rect', 'map-background'];
 
 const MapStage = React.memo(({
   stageRef,
@@ -18,6 +23,7 @@ const MapStage = React.memo(({
   customThemes,
   roadPaths,
   mapItems,
+  activeLanguage,
   activeTool,
   activeLayer,
   selectedId,
@@ -32,7 +38,10 @@ const MapStage = React.memo(({
   onTransformEnd,
   onCardDragEnd,
   onSelectPoint,
-  onDragPoint
+  onDragPoint,
+  onDrawStart,
+  onDrawMove,
+  onDrawEnd,
 }) => {
   if (
     !Number.isFinite(containerWidth) ||
@@ -43,69 +52,184 @@ const MapStage = React.memo(({
     return null;
   }
 
-  const nonLessonCardItems = mapItems.filter((item) => item.type !== 'Lesson Cards');
-  const lessonCardItems = mapItems.filter((item) => item.type === 'Lesson Cards');
-  const backgroundObjectItems = nonLessonCardItems.filter((item) => !isCharacterType(item.type));
-  const characterObjectItems = nonLessonCardItems.filter((item) => isCharacterType(item.type));
-  const orderedObjectItems = [...backgroundObjectItems, ...characterObjectItems];
+  const safeMapItems = Array.isArray(mapItems) ? mapItems : [];
+  const safeRoadPaths = Array.isArray(roadPaths) ? roadPaths : [];
+  const safeBgSections = Array.isArray(bgSections) ? bgSections : [];
+  const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+
+  const nonLessonCardItems = safeMapItems.filter(
+    (item) => item.type !== 'Lesson Cards'
+  );
+
+  const lessonCardItems = safeMapItems.filter(
+    (item) => item.type === 'Lesson Cards'
+  );
+
+  const backgroundObjectItems = nonLessonCardItems.filter(
+    (item) => !isCharacterType(item.type)
+  );
+
+  const characterObjectItems = nonLessonCardItems.filter(
+    (item) => isCharacterType(item.type)
+  );
+
+  const orderedObjectItems = [
+    ...backgroundObjectItems,
+    ...characterObjectItems,
+  ];
+
+  const canDrawRoad =
+    isEditMode &&
+    activeTool === 'Draw Path' &&
+    (activeLayer === 'All Layers' ||
+      activeLayer === 'Roads' ||
+      activeLayer === 'Roads & Paths');
+
+  const canEditRoadPoints =
+    isEditMode &&
+    (activeTool === 'Edit Points' || activeTool === 'Select') &&
+    (activeLayer === 'All Layers' ||
+      activeLayer === 'Roads' ||
+      activeLayer === 'Roads & Paths');
+
+  const handleMouseDown = (event) => {
+    if (!canDrawRoad || !onDrawStart) return;
+    onDrawStart(event);
+  };
+
+  const handleMouseMove = (event) => {
+    if (!canDrawRoad || !onDrawMove) return;
+    onDrawMove(event);
+  };
+
+  const handleMouseUp = () => {
+    onDrawEnd?.();
+  };
+
+  const handleTouchStart = (event) => {
+    if (!canDrawRoad || !onDrawStart) return;
+    onDrawStart(event);
+  };
+
+  const handleTouchMove = (event) => {
+    if (!canDrawRoad || !onDrawMove) return;
+    onDrawMove(event);
+  };
+
+  const handleTouchEnd = () => {
+    onDrawEnd?.();
+  };
+
+  const handleStageClick = (event) => {
+    // Drawing is handled by pointer down/move/up.
+    if (canDrawRoad) return;
+    onStageClick?.(event);
+  };
 
   return (
-    <Stage 
-      ref={stageRef} 
-      width={containerWidth} 
-      height={stageHeight} 
-      listening={isEditMode} 
-      onClick={onStageClick} 
-      onTap={onStageClick}
+    <Stage
+      ref={stageRef}
+      width={containerWidth}
+      height={stageHeight}
+      listening={isEditMode}
+      onClick={handleStageClick}
+      onTap={handleStageClick}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
+      {/* Background */}
       <Layer name="background-layer">
-        <Rect x={0} y={0} width={containerWidth} height={stageHeight} fill={fallbackBgColor} listening={false} />
-        <Group scaleX={scale} scaleY={scale}>
-          {bgSections.map((sec) => (
-            <BackgroundSection key={sec.id} sec={sec} customThemes={customThemes} stageWidth={800} />
+        <Rect
+          name="map-background"
+          x={0}
+          y={0}
+          width={containerWidth}
+          height={stageHeight}
+          fill={fallbackBgColor}
+          listening={canDrawRoad}
+        />
+
+        <Group scaleX={safeScale} scaleY={safeScale}>
+          {safeBgSections.map((sec) => (
+            <BackgroundSection
+              key={sec.id}
+              sec={sec}
+              customThemes={customThemes}
+              stageWidth={800}
+            />
           ))}
         </Group>
       </Layer>
 
-      <Layer name="roads-layer" listening={activeLayer === 'Roads & Paths' || activeTool === 'Draw Path' || activeTool === 'Edit Points' || activeTool === 'Select'}>
-        <Group scaleX={scale} scaleY={scale}>
-          {roadPaths.map((path) => (
-            <RoadPath key={path.id} path={path} scale={scale} />
+      {/* Roads and road points */}
+      <Layer
+        name="roads-layer"
+        listening={
+          isEditMode &&
+          (canDrawRoad ||
+            canEditRoadPoints ||
+            activeLayer === 'Roads & Paths' ||
+            activeLayer === 'Roads' ||
+            activeLayer === 'All Layers')
+        }
+      >
+        <Group scaleX={safeScale} scaleY={safeScale}>
+          {safeRoadPaths.map((path) => (
+            <RoadPath key={path.id} path={path} scale={safeScale} />
           ))}
 
-          {roadPaths.map((path) => (
-            path.points.map((pt, index) => {
-              if (index % 2 === 0) {
-                const ptIndex = index / 2;
-                const x = pt;
-                const y = path.points[index + 1];
-                const isCurrentSelectedPoint = selectedPointIndex === ptIndex;
-                return (
-                  <RoadPoint
-                    key={`pt-${path.id}-${index}`}
-                    x={x}
-                    y={y}
-                    index={ptIndex}
-                    isSelected={isCurrentSelectedPoint}
-                    isDraggable={activeTool === 'Draw Path' || activeTool === 'Edit Points' || activeTool === 'Select'}
-                    onSelect={onSelectPoint}
-                    onDragMove={onDragPoint}
-                  />
-                );
+          {safeRoadPaths.map((path) => {
+            if (!Array.isArray(path.points)) return null;
+
+            return path.points.map((pointX, index) => {
+              if (index % 2 !== 0) return null;
+
+              const pointIndex = index / 2;
+              const pointY = path.points[index + 1];
+
+              if (!Number.isFinite(pointX) || !Number.isFinite(pointY)) {
+                return null;
               }
-              return null;
-            })
-          ))}
+
+              return (
+                <RoadPoint
+                  key={`point-${path.id}-${pointIndex}`}
+                  x={pointX}
+                  y={pointY}
+                  index={pointIndex}
+                  isSelected={selectedPointIndex === pointIndex}
+                  isDraggable={
+                    canEditRoadPoints && activeTool === 'Edit Points'
+                  }
+                  onSelect={onSelectPoint}
+                  onDragMove={onDragPoint}
+                />
+              );
+            });
+          })}
         </Group>
       </Layer>
 
-      <Layer name="objects-layer" listening>
-        <Group scaleX={scale} scaleY={scale}>
+      {/* Map objects */}
+      <Layer name="objects-layer" listening={isEditMode}>
+        <Group scaleX={safeScale} scaleY={safeScale}>
           {orderedObjectItems.map((item) => {
-            const catName = item.type || 'Buildings';
-            const isLayerActive = activeLayer === 'All Layers' || activeLayer === catName;
+            const categoryName = item.type || 'Buildings';
+
+            const isLayerActive =
+              activeLayer === 'All Layers' ||
+              activeLayer === categoryName ||
+              activeTool === 'Delete';
+
             const isCharacter = isCharacterType(item.type);
             const isHidden = isCharacter && isWalking;
+
             return (
               <CanvasItem
                 key={item.id}
@@ -125,24 +249,33 @@ const MapStage = React.memo(({
         </Group>
       </Layer>
 
-      <Layer name="lesson-cards-layer" listening>
-        <Group scaleX={scale} scaleY={scale}>
-          {lessonCardItems.map((item, idx) => (
+      {/* Lesson cards */}
+      <Layer name="lesson-cards-layer" listening={isEditMode}>
+        <Group scaleX={safeScale} scaleY={safeScale}>
+          {lessonCardItems.map((item, index) => (
             <LessonCard
               key={`card-${item.id}`}
               item={item}
-              slotNumber={item.order || idx + 1}
-              activeLanguage="en"
+              slotNumber={item.order || index + 1}
+              activeLanguage={activeLanguage}
+              activeTool={activeTool}
+              isLayerActive={
+                activeLayer === 'All Layers' ||
+                activeLayer === 'Lesson Cards' ||
+                activeTool === 'Delete'
+              }
               isSelected={selectedId === item.id}
               onSelect={onSelectItem}
               onCardDragEnd={onCardDragEnd}
               onDelete={onDeleteItem}
+              onClone={onCloneItem}
             />
           ))}
         </Group>
       </Layer>
 
-      <Layer name="transformer-layer">
+      {/* Transformer */}
+      <Layer name="transformer-layer" listening={isEditMode}>
         <Transformer
           ref={trRef}
           keepRatio={false}
@@ -156,5 +289,7 @@ const MapStage = React.memo(({
     </Stage>
   );
 });
+
+MapStage.displayName = 'MapStage';
 
 export default MapStage;

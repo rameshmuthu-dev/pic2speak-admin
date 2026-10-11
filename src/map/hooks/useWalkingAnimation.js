@@ -212,6 +212,10 @@ export const useWalkingAnimation = (mapItems, roadPaths, selectedRoadId, committ
     }
   }, [actualTargetIndex, lessonWalkStops, currentLessonIndex]);
 
+  const stopWalking = useCallback(() => {
+    setIsWalking(false);
+  }, []);
+
   return {
     isWalking,
     walkFrameIndex,
@@ -232,6 +236,7 @@ export const useWalkingAnimation = (mapItems, roadPaths, selectedRoadId, committ
     walkerScaledWidth,
     walkerScaledHeight,
     hasWalkFrames,
+    stopWalking,
     handleTestWalk,
     handleAnimationComplete
   };
