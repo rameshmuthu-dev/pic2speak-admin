@@ -47,7 +47,6 @@ const LessonContent = () => {
 
   const [orderMode, setOrderMode] = useState('auto');
   const [order, setOrder] = useState('');
-  const [completionXP, setCompletionXP] = useState(20);
   const [rewardCoins, setRewardCoins] = useState(10);
 
   const [contentLanguageId, setContentLanguageId] = useState('');
@@ -115,7 +114,6 @@ const LessonContent = () => {
     setSelectedLessonId('');
     setOrderMode('auto');
     setOrder('');
-    setCompletionXP(20);
     setRewardCoins(10);
     setEditingContentId(null);
     setTitle('');
@@ -158,7 +156,7 @@ const LessonContent = () => {
       const orderToSubmit = buildOrderToSubmit();
 
       const lessonResult = await dispatch(
-        createLessonMaster({ order: orderToSubmit, completionXP, rewardCoins })
+        createLessonMaster({ order: orderToSubmit, rewardCoins })
       );
 
       if (lessonResult.meta.requestStatus !== 'fulfilled') {
@@ -441,20 +439,6 @@ const LessonContent = () => {
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Completion XP {lessonMode === 'existing' && <span className="text-slate-400 font-normal">(lesson-wide)</span>}
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  disabled={lessonMode === 'existing'}
-                  value={lessonMode === 'existing' ? (selectedExistingLesson?.completionXP ?? 0) : completionXP}
-                  onChange={(e) => setCompletionXP(Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-teal-500 disabled:bg-slate-50 disabled:text-slate-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                   Reward Coins {lessonMode === 'existing' && <span className="text-slate-400 font-normal">(lesson-wide)</span>}
                 </label>
                 <input
@@ -504,12 +488,6 @@ const LessonContent = () => {
                 <li className="flex items-center justify-between">
                   <span className="text-slate-500">Available From</span>
                   <span className="font-semibold text-slate-800">{availableFrom || '-'}</span>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span className="text-slate-500">Completion XP</span>
-                  <span className="font-semibold text-amber-500">
-                    ⭐ {lessonMode === 'existing' ? (selectedExistingLesson?.completionXP ?? 0) : completionXP}
-                  </span>
                 </li>
                 <li className="flex items-center justify-between">
                   <span className="text-slate-500">Reward Coins</span>

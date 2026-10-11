@@ -41,7 +41,6 @@ const LessonList = () => {
 
   const [formData, setFormData] = useState({
     order: '',
-    completionXP: 20,
     xpPerSentence: 2,
     rewardCoins: 10,
     accessType: 'free'
@@ -66,7 +65,7 @@ const LessonList = () => {
   }, [actionStatus, error, dispatch]);
 
   const resetForm = () => {
-    setFormData({ order: '', completionXP: 20, xpPerSentence: 2, rewardCoins: 10, accessType: 'free' });
+    setFormData({ order: '', xpPerSentence: 2, rewardCoins: 10, accessType: 'free' });
     setSelectedLesson(null);
     setIsEditMode(false);
   };
@@ -82,7 +81,6 @@ const LessonList = () => {
     setSelectedLesson(lesson);
     setFormData({
       order: lesson.order,
-      completionXP: lesson.completionXP,
       xpPerSentence: lesson.xpPerSentence !== undefined ? lesson.xpPerSentence : 2,
       rewardCoins: lesson.rewardCoins,
       accessType: lesson.accessType || 'free'
@@ -95,7 +93,6 @@ const LessonList = () => {
 
     const payload = {
       order: Number(formData.order),
-      completionXP: Number(formData.completionXP),
       xpPerSentence: Number(formData.xpPerSentence),
       rewardCoins: Number(formData.rewardCoins),
       accessType: formData.accessType
@@ -320,16 +317,7 @@ const LessonList = () => {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">Completion XP</label>
-              <input 
-                type="number"
-                className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-slate-800 border-2 border-transparent focus:border-teal-500 focus:bg-white transition-all outline-none" 
-                value={formData.completionXP} 
-                onChange={(e) => setFormData({...formData, completionXP: e.target.value})} 
-              />
-            </div>
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">XP / Sentence</label>
               <input 
@@ -368,4 +356,3 @@ const LessonList = () => {
 };
 
 export default LessonList;
-

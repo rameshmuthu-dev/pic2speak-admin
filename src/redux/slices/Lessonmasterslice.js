@@ -30,9 +30,9 @@ export const fetchLessonMasterById = createAsyncThunk(
 
 export const createLessonMaster = createAsyncThunk(
   'lessonMaster/createLessonMaster',
-  async ({ order, completionXP, xpPerSentence, rewardCoins, accessType }, { rejectWithValue }) => {
+  async ({ order, xpPerSentence, rewardCoins, accessType }, { rejectWithValue }) => {
     try {
-      const res = await API.post(BASE_URL, { order, completionXP, xpPerSentence, rewardCoins, accessType });
+      const res = await API.post(BASE_URL, { order, xpPerSentence, rewardCoins, accessType });
       return res.data?.data !== undefined ? res.data.data : res.data;
     } catch (err) {
       return rejectWithValue(err?.response?.data?.message || err.message || 'Failed to create lesson.');
@@ -42,9 +42,9 @@ export const createLessonMaster = createAsyncThunk(
 
 export const updateLessonMaster = createAsyncThunk(
   'lessonMaster/updateLessonMaster',
-  async ({ id, order, completionXP, xpPerSentence, rewardCoins, accessType }, { rejectWithValue }) => {
+  async ({ id, order, xpPerSentence, rewardCoins, accessType }, { rejectWithValue }) => {
     try {
-      const res = await API.put(`${BASE_URL}/${id}`, { order, completionXP, xpPerSentence, rewardCoins, accessType });
+      const res = await API.put(`${BASE_URL}/${id}`, { order, xpPerSentence, rewardCoins, accessType });
       return res.data?.data !== undefined ? res.data.data : res.data;
     } catch (err) {
       return rejectWithValue(err?.response?.data?.message || err.message || 'Failed to update lesson.');
