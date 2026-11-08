@@ -53,69 +53,69 @@ const PreviewModal = ({
         <div className="flex-1 overflow-auto p-6 bg-slate-100">
           <div className="flex justify-center mb-4">
             <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-              {hasValidStageSize && <Stage width={containerWidth} height={previewStageHeight} listening={false}>
-                <Layer name="background-layer">
-                  <Rect x={0} y={0} width={containerWidth} height={previewStageHeight} fill={fallbackBgColor} listening={false} />
-                  <Group scaleX={scale} scaleY={scale}>
-                    {bgSections && bgSections.length > 0 && bgSections.map((sec) => (
-                      <BackgroundSection 
-                        key={sec.id} 
-                        sec={sec} 
-                        customThemes={customThemes} 
-                        stageWidth={800} 
-                      />
-                    ))}
-                  </Group>
-                </Layer>
-                <Layer name="roads-layer">
-                  <Group scaleX={scale} scaleY={scale}>
-                    {roadPaths && roadPaths.length > 0 && roadPaths.map((path) => (
-                      <RoadPath 
-                        key={path.id} 
-                        path={path} 
-                        scale={scale} 
-                      />
-                    ))}
-                  </Group>
-                </Layer>
-                <Layer name="objects-layer">
-                  <Group scaleX={scale} scaleY={scale}>
-                    {objectItems && objectItems.length > 0 && objectItems.map((item) => (
-                      <CanvasItem
-                        key={item.id}
-                        item={item}
-                        activeTool="Select"
-                        isSelected={false}
-                        isLayerActive={true}
-                        isHidden={false}
-                        isPreview={true}
-                        onSelect={() => {}}
-                        onDelete={() => {}}
-                        onClone={() => {}}
-                        onDragEnd={() => {}}
-                        onTransformEnd={() => {}}
-                      />
-                    ))}
-                  </Group>
-                </Layer>
-                <Layer name="lesson-cards-layer">
-                  <Group scaleX={scale} scaleY={scale}>
-                    {lessonCards && lessonCards.length > 0 && lessonCards.map((item, idx) => (
-                      <LessonCard
-                        key={`card-${item.id}`}
-                        item={item}
-                        slotNumber={item.order || idx + 1}
-                        activeLanguage={activeLanguage}
-                        isSelected={false}
-                        isPreview={true}
-                        onSelect={() => {}}
-                        onCardDragEnd={() => {}}
-                        onDelete={() => {}}
-                      />
-                    ))}
-                  </Group>
-                </Layer>
-              </Stage>}
+              {hasValidStageSize && (
+                <Stage width={containerWidth} height={previewStageHeight} listening={false}>
+                  <Layer name="background-layer">
+                    <Rect x={0} y={0} width={containerWidth} height={previewStageHeight} fill={fallbackBgColor} listening={false} />
+                    <Group scaleX={scale} scaleY={scale}>
+                      {bgSections && bgSections.length > 0 && bgSections.map((sec) => (
+                        <BackgroundSection 
+                          key={sec.id} 
+                          sec={sec} 
+                          customThemes={customThemes} 
+                          stageWidth={800} 
+                        />
+                      ))}
+                    </Group>
+                  </Layer>
+                  <Layer name="roads-layer">
+                    <Group scaleX={scale} scaleY={scale}>
+                      {roadPaths && roadPaths.length > 0 && roadPaths.map((path) => (
+                        <RoadPath key={path.id} path={path} />
+                      ))}
+                    </Group>
+                  </Layer>
+                  <Layer name="objects-layer">
+                    <Group scaleX={scale} scaleY={scale}>
+                      {objectItems && objectItems.length > 0 && objectItems.map((item) => (
+                        <CanvasItem
+                          key={item.id}
+                          scale={scale}
+                          item={item}
+                          activeTool="Select"
+                          isSelected={false}
+                          isLayerActive={true}
+                          isHidden={false}
+                          isPreview={true}
+                          onSelect={() => {}}
+                          onDelete={() => {}}
+                          onClone={() => {}}
+                          onDragEnd={() => {}}
+                          onTransformEnd={() => {}}
+                        />
+                      ))}
+                    </Group>
+                  </Layer>
+                  <Layer name="lesson-cards-layer">
+                    <Group scaleX={scale} scaleY={scale}>
+                      {lessonCards && lessonCards.length > 0 && lessonCards.map((item, idx) => (
+                        <LessonCard
+                          key={`card-${item.id}`}
+                          scale={scale}
+                          item={item}
+                          slotNumber={item.order || idx + 1}
+                          activeLanguage={activeLanguage}
+                          isSelected={false}
+                          isPreview={true}
+                          onSelect={() => {}}
+                          onCardDragEnd={() => {}}
+                          onDelete={() => {}}
+                        />
+                      ))}
+                    </Group>
+                  </Layer>
+                </Stage>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">

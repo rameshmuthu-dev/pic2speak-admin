@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import {
   Group,
@@ -12,6 +11,7 @@ import { getOptimizedImageUrl } from '../../utils/optimizedImageUrl.js';
 
 const CanvasItem = React.memo(({
   item,
+  metrics,
   activeTool,
   isSelected,
   onSelect,
@@ -38,13 +38,19 @@ const CanvasItem = React.memo(({
 
   const canInteract = !isPreview && !isHidden && (isLayerActive || activeTool === 'Delete');
 
+  const itemWidth = item.width || 40;
+  const itemHeight = item.height || 40;
+  // Ensure item stays completely within canonical 800px world bounds
+  const safeX = Math.max(0, Math.min(800 - itemWidth, Number.isFinite(item.x) ? item.x : 0));
+  const safeY = Math.max(0, Number.isFinite(item.y) ? item.y : 0);
+
   return (
     <Group
       ref={shapeRef}
       id={`item-${item.id}`}
       name="map-item"
-      x={item.x}
-      y={item.y}
+      x={safeX}
+      y={safeY}
       scaleX={1}
       scaleY={1}
       opacity={isHidden ? 0 : 1}
@@ -77,7 +83,9 @@ const CanvasItem = React.memo(({
       }}
       onDragEnd={(e) => {
         if (canInteract) {
-          onDragEnd(item.id, e.target.x(), e.target.y());
+          const clampedWorldX = Math.max(0, Math.min(800 - itemWidth, Math.round(e.target.x())));
+          const clampedWorldY = Math.max(0, Math.round(e.target.y()));
+          onDragEnd(item.id, clampedWorldX, clampedWorldY);
         }
       }}
       onTransformEnd={() => {
@@ -90,54 +98,59 @@ const CanvasItem = React.memo(({
         node.scaleX(1);
         node.scaleY(1);
 
-        const newWidth = Math.max(10, (item.width || 40) * scaleX);
-        const newHeight = Math.max(10, (item.height || 40) * scaleY);
+        const newWidth = Math.max(20, Math.round(itemWidth * scaleX));
+        const newHeight = Math.max(20, Math.round(itemHeight * scaleY));
+        const clampedWorldX = Math.max(0, Math.min(800 - newWidth, Math.round(node.x())));
+        const clampedWorldY = Math.max(0, Math.round(node.y()));
 
         onTransformEnd(item.id, {
-          x: node.x(),
-          y: node.y(),
+          x: clampedWorldX,
+          y: clampedWorldY,
           scaleX: 1,
           scaleY: 1,
           width: newWidth,
           height: newHeight,
-          rotation: node.rotation(),
+          rotation: Math.round(node.rotation()),
         });
       }}
     >
-      <Rect
-        width={item.width || 40}
-        height={item.height || 40}
-        fill="transparent"
-        listening
-      />
-
       {imageIsReady ? (
         <KonvaImage
           image={img}
           width={item.width || 40}
           height={item.height || 40}
-          listening={false}
+          stroke={isSelected ? '#00f0ff' : undefined}
+          strokeWidth={isSelected ? 2 : 0}
+          shadowColor={isSelected ? '#00f0ff' : undefined}
+          shadowBlur={isSelected ? 10 : 0}
         />
       ) : (
-        <Group listening={false}>
-          <Rect
-            width={item.width || 40}
-            height={item.height || 40}
-            fill={item.color || '#599824'}
-            cornerRadius={6}
-            stroke="#386623"
-            strokeWidth={1}
-          />
-          <KonvaText
-            text={item.emoji || '🏢'}
-            fontSize={16}
-            x={10}
-            y={10}
-          />
-        </Group>
+        <Rect
+          width={item.width || 40}
+          height={item.height || 40}
+          fill={item.color || '#3b82f6'}
+          cornerRadius={6}
+          stroke={isSelected ? '#00f0ff' : undefined}
+          strokeWidth={isSelected ? 2 : 0}
+        />
+      )}
+
+      {/* Label for visual identification */}
+      {item.label && !imageIsReady && (
+        <KonvaText
+          text={item.label}
+          fontSize={10}
+          fill="#ffffff"
+          x={2}
+          y={2}
+          width={(item.width || 40) - 4}
+          ellipsis
+        />
       )}
     </Group>
   );
 });
+
+CanvasItem.displayName = 'CanvasItem';
 
 export default CanvasItem;

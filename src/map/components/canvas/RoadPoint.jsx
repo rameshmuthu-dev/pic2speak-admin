@@ -5,6 +5,7 @@ const RoadPoint = React.memo(({
   x,
   y,
   index,
+  scale = 1,
   isSelected,
   isDraggable,
   onSelect,
@@ -17,22 +18,28 @@ const RoadPoint = React.memo(({
 
   const handleDragMove = (e) => {
     e.cancelBubble = true;
+    const worldX = Math.max(0, Math.min(800, Math.round(e.target.x())));
+    const worldY = Math.max(0, Math.round(e.target.y()));
 
     onDragMove?.(
       index,
-      e.target.x(),
-      e.target.y()
+      worldX,
+      worldY
     );
   };
+
+  const pointRadius = Math.max(6, Math.round((isSelected ? 9 : 6) / Math.sqrt(scale || 1)));
 
   return (
     <Circle
       x={x}
       y={y}
-      radius={isSelected ? 9 : 6}
-      fill={isSelected ? '#f59e0b' : '#ffffff'}
-      stroke={isSelected ? '#b45309' : '#0d9488'}
+      radius={pointRadius}
+      fill={isSelected ? '#00f0ff' : '#ffffff'}
+      stroke={isSelected ? '#38bdf8' : '#8b5cf6'}
       strokeWidth={isSelected ? 3 : 2}
+      shadowColor="#00f0ff"
+      shadowBlur={isSelected ? 8 : 4}
       draggable={Boolean(isDraggable)}
       hitStrokeWidth={10}
       perfectDrawEnabled={false}

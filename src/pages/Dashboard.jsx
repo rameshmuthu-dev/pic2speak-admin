@@ -99,12 +99,12 @@ const Dashboard = () => {
         {/* --- CHARTS SECTION --- */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 w-full">
           {/* Main Growth Chart */}
-          <div className="xl:col-span-2 bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm h-87 md:h-112 flex flex-col w-full">
+          <div className="xl:col-span-2 bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm min-h-[360px] md:min-h-[440px] flex flex-col w-full">
             <h3 className="text-xs font-black text-slate-400 uppercase mb-8 flex items-center gap-2">
               <TrendingUp size={18} className="text-teal-500" /> Growth Fluctuations
             </h3>
-            <div className="flex-1 w-full pb-2">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="flex-1 w-full pb-2 min-h-[240px] min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                 <AreaChart data={tradingData} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
@@ -123,10 +123,10 @@ const Dashboard = () => {
           </div>
 
           {/* Donut Chart */}
-          <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm h-87 md:h-112 flex flex-col w-full">
+          <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm min-h-[360px] md:min-h-[440px] flex flex-col w-full">
             <h3 className="text-xs font-black text-slate-400 uppercase mb-8 text-center">Distribution Overview</h3>
-            <div className="flex-1">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="flex-1 w-full min-h-[200px] min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={180}>
                 <RePieChart>
                   <Pie data={categoryData} innerRadius="65%" outerRadius="85%" paddingAngle={8} dataKey="value">
                     {categoryData.map((entry, index) => (

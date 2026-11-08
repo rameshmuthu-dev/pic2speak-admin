@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Stage, Layer, Group, Rect, Transformer } from 'react-konva';
 
 import BackgroundSection from './BackgroundSection.jsx';
@@ -10,14 +10,13 @@ import RoadPoint from './RoadPoint.jsx';
 
 import { isCharacterType } from '../../utils/mapCalculations.js';
 
-const BACKGROUND_NAMES = ['bg-image', 'bg-rect', 'map-background'];
-
 const MapStage = React.memo(({
   stageRef,
   trRef,
   containerWidth,
   stageHeight,
-  scale,
+  metrics,
+  scale = 1,
   isEditMode,
   bgSections,
   customThemes,
@@ -28,7 +27,7 @@ const MapStage = React.memo(({
   activeLayer,
   selectedId,
   selectedPointIndex,
-  fallbackBgColor,
+  fallbackBgColor = '#071426',
   isWalking,
   onStageClick,
   onSelectItem,
@@ -43,26 +42,35 @@ const MapStage = React.memo(({
   onDrawMove,
   onDrawEnd,
 }) => {
+  // Validate stage dimensions.
+  const safeWidth = Number(containerWidth);
+  const safeHeight = Number(stageHeight);
+
   if (
-    !Number.isFinite(containerWidth) ||
-    !Number.isFinite(stageHeight) ||
-    containerWidth <= 0 ||
-    stageHeight <= 0
+    !Number.isFinite(safeWidth) ||
+    !Number.isFinite(safeHeight) ||
+    safeWidth <= 0 ||
+    safeHeight <= 0
   ) {
     return null;
   }
 
+  // Prevent undefined, zero or invalid scale values.
+  const safeScale =
+    Number.isFinite(Number(scale)) && Number(scale) > 0
+      ? Number(scale)
+      : 1;
+
   const safeMapItems = Array.isArray(mapItems) ? mapItems : [];
   const safeRoadPaths = Array.isArray(roadPaths) ? roadPaths : [];
   const safeBgSections = Array.isArray(bgSections) ? bgSections : [];
-  const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
 
   const nonLessonCardItems = safeMapItems.filter(
-    (item) => item.type !== 'Lesson Cards'
+    (item) => item && item.type !== 'Lesson Cards'
   );
 
   const lessonCardItems = safeMapItems.filter(
-    (item) => item.type === 'Lesson Cards'
+    (item) => item && item.type === 'Lesson Cards'
   );
 
   const backgroundObjectItems = nonLessonCardItems.filter(
@@ -81,56 +89,71 @@ const MapStage = React.memo(({
   const canDrawRoad =
     isEditMode &&
     activeTool === 'Draw Path' &&
-    (activeLayer === 'All Layers' ||
-      activeLayer === 'Roads' ||
-      activeLayer === 'Roads & Paths');
+    ['All Layers', 'Roads', 'Roads & Paths'].includes(activeLayer);
 
   const canEditRoadPoints =
     isEditMode &&
-    (activeTool === 'Edit Points' || activeTool === 'Select') &&
-    (activeLayer === 'All Layers' ||
-      activeLayer === 'Roads' ||
-      activeLayer === 'Roads & Paths');
+    ['Edit Points', 'Select'].includes(activeTool) &&
+    ['All Layers', 'Roads', 'Roads & Paths'].includes(activeLayer);
 
-  const handleMouseDown = (event) => {
+  const canListenToRoadLayer =
+    isEditMode &&
+    (
+      canDrawRoad ||
+      canEditRoadPoints ||
+      ['All Layers', 'Roads', 'Roads & Paths'].includes(activeLayer)
+    );
+
+  const handleMouseDown = useCallback((event) => {
     if (!canDrawRoad || !onDrawStart) return;
     onDrawStart(event);
-  };
+  }, [canDrawRoad, onDrawStart]);
 
-  const handleMouseMove = (event) => {
+  const handleMouseMove = useCallback((event) => {
     if (!canDrawRoad || !onDrawMove) return;
     onDrawMove(event);
-  };
+  }, [canDrawRoad, onDrawMove]);
 
-  const handleMouseUp = () => {
-    onDrawEnd?.();
-  };
+  const handleMouseUp = useCallback(() => {
+    if (canDrawRoad) onDrawEnd?.();
+  }, [canDrawRoad, onDrawEnd]);
 
-  const handleTouchStart = (event) => {
+  const handleTouchStart = useCallback((event) => {
     if (!canDrawRoad || !onDrawStart) return;
     onDrawStart(event);
-  };
+  }, [canDrawRoad, onDrawStart]);
 
-  const handleTouchMove = (event) => {
+  const handleTouchMove = useCallback((event) => {
     if (!canDrawRoad || !onDrawMove) return;
     onDrawMove(event);
-  };
+  }, [canDrawRoad, onDrawMove]);
 
-  const handleTouchEnd = () => {
-    onDrawEnd?.();
-  };
+  const handleTouchEnd = useCallback(() => {
+    if (canDrawRoad) onDrawEnd?.();
+  }, [canDrawRoad, onDrawEnd]);
 
-  const handleStageClick = (event) => {
-    // Drawing is handled by pointer down/move/up.
+  const handleStageClick = useCallback((event) => {
     if (canDrawRoad) return;
     onStageClick?.(event);
-  };
+  }, [canDrawRoad, onStageClick]);
+
+  const backgroundSections = useMemo(
+    () => safeBgSections.map((sec) => (
+      <BackgroundSection
+        key={sec.id}
+        sec={sec}
+        customThemes={customThemes}
+        stageWidth={800}
+      />
+    )),
+    [safeBgSections, customThemes]
+  );
 
   return (
     <Stage
       ref={stageRef}
-      width={containerWidth}
-      height={stageHeight}
+      width={safeWidth}
+      height={safeHeight}
       listening={isEditMode}
       onClick={handleStageClick}
       onTap={handleStageClick}
@@ -143,45 +166,40 @@ const MapStage = React.memo(({
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
     >
-      {/* Background */}
+      {/* Background Layer */}
       <Layer name="background-layer">
         <Rect
           name="map-background"
           x={0}
           y={0}
-          width={containerWidth}
-          height={stageHeight}
+          width={safeWidth}
+          height={safeHeight}
           fill={fallbackBgColor}
           listening={canDrawRoad}
         />
 
-        <Group scaleX={safeScale} scaleY={safeScale}>
-          {safeBgSections.map((sec) => (
-            <BackgroundSection
-              key={sec.id}
-              sec={sec}
-              customThemes={customThemes}
-              stageWidth={800}
-            />
-          ))}
+        <Group
+          scaleX={safeScale}
+          scaleY={safeScale}
+        >
+          {backgroundSections}
         </Group>
       </Layer>
 
-      {/* Roads and road points */}
+      {/* Road Layer */}
       <Layer
         name="roads-layer"
-        listening={
-          isEditMode &&
-          (canDrawRoad ||
-            canEditRoadPoints ||
-            activeLayer === 'Roads & Paths' ||
-            activeLayer === 'Roads' ||
-            activeLayer === 'All Layers')
-        }
+        listening={canListenToRoadLayer}
       >
-        <Group scaleX={safeScale} scaleY={safeScale}>
+        <Group
+          scaleX={safeScale}
+          scaleY={safeScale}
+        >
           {safeRoadPaths.map((path) => (
-            <RoadPath key={path.id} path={path} scale={safeScale} />
+            <RoadPath
+              key={path.id}
+              path={path}
+            />
           ))}
 
           {safeRoadPaths.map((path) => {
@@ -193,7 +211,10 @@ const MapStage = React.memo(({
               const pointIndex = index / 2;
               const pointY = path.points[index + 1];
 
-              if (!Number.isFinite(pointX) || !Number.isFinite(pointY)) {
+              if (
+                !Number.isFinite(pointX) ||
+                !Number.isFinite(pointY)
+              ) {
                 return null;
               }
 
@@ -203,9 +224,11 @@ const MapStage = React.memo(({
                   x={pointX}
                   y={pointY}
                   index={pointIndex}
+                  scale={safeScale}
                   isSelected={selectedPointIndex === pointIndex}
                   isDraggable={
-                    canEditRoadPoints && activeTool === 'Edit Points'
+                    canEditRoadPoints &&
+                    activeTool === 'Edit Points'
                   }
                   onSelect={onSelectPoint}
                   onDragMove={onDragPoint}
@@ -216,9 +239,12 @@ const MapStage = React.memo(({
         </Group>
       </Layer>
 
-      {/* Map objects */}
+      {/* Decorative Objects and Characters */}
       <Layer name="objects-layer" listening={isEditMode}>
-        <Group scaleX={safeScale} scaleY={safeScale}>
+        <Group
+          scaleX={safeScale}
+          scaleY={safeScale}
+        >
           {orderedObjectItems.map((item) => {
             const categoryName = item.type || 'Buildings';
 
@@ -234,6 +260,7 @@ const MapStage = React.memo(({
               <CanvasItem
                 key={item.id}
                 item={item}
+                scale={safeScale}
                 activeTool={activeTool}
                 isSelected={selectedId === item.id}
                 isLayerActive={isLayerActive}
@@ -249,14 +276,18 @@ const MapStage = React.memo(({
         </Group>
       </Layer>
 
-      {/* Lesson cards */}
+      {/* Lesson Cards */}
       <Layer name="lesson-cards-layer" listening={isEditMode}>
-        <Group scaleX={safeScale} scaleY={safeScale}>
+        <Group
+          scaleX={safeScale}
+          scaleY={safeScale}
+        >
           {lessonCardItems.map((item, index) => (
             <LessonCard
               key={`card-${item.id}`}
               item={item}
               slotNumber={item.order || index + 1}
+              scale={safeScale}
               activeLanguage={activeLanguage}
               activeTool={activeTool}
               isLayerActive={
@@ -279,8 +310,8 @@ const MapStage = React.memo(({
         <Transformer
           ref={trRef}
           keepRatio={false}
-          borderStroke="#0d9488"
-          anchorStroke="#0d9488"
+          borderStroke="#00f0ff"
+          anchorStroke="#00f0ff"
           anchorFill="#ffffff"
           anchorSize={9}
           borderStrokeWidth={2}

@@ -45,14 +45,13 @@ import { sameCategory } from './utils/mapCalculations.js';
 import { extractCharacterConfig } from './utils/mapCalculations.js';
 import { cloneSerializable, createMapSnapshot, snapshotsEqual } from './utils/editorState.js';
 
-const BASE_WIDTH = 800;
 const defaultBgData = {
   themes: {
     rich_grass_green: {
       image: "",
       properties: { scale: 1, opacity: 1 },
-      color: "#599824",
-      label: "Rich Grass Green"
+      color: "#071426",
+      label: "Deep Navy"
     },
   },
   currentTheme: "rich_grass_green"
@@ -125,8 +124,8 @@ const AdminBuilder = ({ onManageLanguages }) => {
 
   const { isDataLoaded, loadError, initializeData } = useMapData();
   const { uploadFileToServer, loadImageNaturalSize, fitAssetDimensions } = useAssetUpload(dispatch);
-  const { containerWidth, scale } = useResponsiveContainer(responsiveContainerRef, isDataLoaded);
-  const { selectedRoadId, setSelectedRoadId, selectedPointIndex, setSelectedPointIndex, activeRoad, handleUndoLastPoint, handleSelectNextPoint, handleStageClick, handleUpdateRoadProperty, handleUpdatePoint, handleDeletePoint, handleDeleteRoad } = useRoadPath(roadPaths, setRoadPaths, activeTool, activeLayer, scale);
+  const { containerWidth, metrics, scale } = useResponsiveContainer(responsiveContainerRef, isDataLoaded);
+  const { selectedRoadId, setSelectedRoadId, selectedPointIndex, setSelectedPointIndex, activeRoad, handleUndoLastPoint, handleSelectNextPoint, handleStageClick, handleDrawStart, handleDrawMove, handleDrawEnd, handleUpdateRoadProperty, handleUpdatePoint, handleDeletePoint, handleDeleteRoad } = useRoadPath(roadPaths, setRoadPaths, activeTool, activeLayer, scale);
   const { lessonOptions, handleSelectLessonForCard } = useLessonCard(lessonMasters, lessonContents, activeLanguage, mapItems, setMapItems);
   const { isWalking, walkFrameIndex, walkKey, walkPoints, walkCurveXs, walkCurveYs, walkSegmentDuration, walkFacingLeft, isAtFinalStop, currentWalkStopNumber, totalWalkStops, hasWalkFrames, stopWalking, handleTestWalk, handleAnimationComplete } = useWalkingAnimation(mapItems, roadPaths, selectedRoadId, committedRoadPaths, scale, activeLanguage);
 
@@ -224,18 +223,33 @@ const AdminBuilder = ({ onManageLanguages }) => {
   const selectedItem = mapItems.find((item) => item.id === selectedId);
   const { visibleBuildingIds, visibleHeight } = getLanguageMapProgress(mapItems, activeLanguage);
 
-  const totalStageHeight = bgSections.reduce(
-    (acc, sec) => acc + Math.max(1, Number(sec.height) || 0),
-    0
-  );
-  const stageHeight = Math.max(800, totalStageHeight) * scale;
+  const totalStageHeight = useMemo(() => {
+    const bgTotal = bgSections.reduce(
+      (acc, sec) => Math.max(acc, (Number(sec.y) || 0) + Math.max(1, Number(sec.height) || 0)),
+      0
+    );
+    const itemsMaxY = mapItems.reduce(
+      (acc, item) => Math.max(acc, (Number(item.y) || 0) + (Number(item.height) || 60)),
+      0
+    );
+    const roadMaxY = roadPaths.reduce((acc, path) => {
+      const points = path.points || [];
+      let maxY = 0;
+      for (let i = 1; i < points.length; i += 2) {
+        if (points[i] > maxY) maxY = points[i];
+      }
+      return Math.max(acc, maxY);
+    }, 0);
+    return Math.max(800, bgTotal, itemsMaxY + 160, roadMaxY + 160);
+  }, [bgSections, mapItems, roadPaths]);
+  const stageHeight = totalStageHeight * scale;
 
   const lastSectionTheme = bgSections.length
     ? customThemes[bgSections[bgSections.length - 1].themeKey]
     : null;
   const fallbackBgColor = lastSectionTheme?.color || '#599824';
 
-  const previewStageHeight = Math.max(600, visibleHeight || 600);
+  const previewStageHeight = Math.round(Math.max(300, (visibleHeight || totalStageHeight) * scale));
 
   const publishedSlotsForActiveLang = visibleBuildingIds.size;
   const totalBuildingSlots = mapItems.filter((item) => item.type === 'Lesson Cards').length;
@@ -277,18 +291,34 @@ const AdminBuilder = ({ onManageLanguages }) => {
   }, []);
 
   const handleDragEnd = useCallback((id, x, y) => {
-    setMapItems((prev) => prev.map((item) => (item.id === id ? { ...item, x, y } : item)));
+    setMapItems((prev) => prev.map((item) => {
+      if (item.id !== id) return item;
+      const w = item.width || 40;
+      const clampedX = Math.max(0, Math.min(800 - w, Math.round(x)));
+      const clampedY = Math.max(0, Math.round(y));
+      return { ...item, x: clampedX, y: clampedY };
+    }));
   }, []);
 
   const handleTransformEnd = useCallback((id, attrs) => {
-    setMapItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...attrs } : item)));
+    setMapItems((prev) => prev.map((item) => {
+      if (item.id !== id) return item;
+      const w = attrs.width || item.width || 40;
+      const clampedX = Math.max(0, Math.min(800 - w, Math.round(attrs.x ?? item.x)));
+      const clampedY = Math.max(0, Math.round(attrs.y ?? item.y));
+      return { ...item, ...attrs, x: clampedX, y: clampedY };
+    }));
   }, []);
 
   const handleCardDragEnd = useCallback((id, x, y) => {
     setMapItems((prev) => prev.map((item) => {
       if (item.id !== id) return item;
-      const newRevealHeight = Math.max(80, y + (item.height || 72) + 80);
-      return { ...item, x, y, revealHeight: newRevealHeight };
+      const cardW = item.width || 154;
+      const cardH = item.height || 72;
+      const clampedX = Math.max(0, Math.min(800 - cardW, Math.round(x)));
+      const clampedY = Math.max(0, Math.round(y));
+      const newRevealHeight = Math.max(80, clampedY + cardH + 80);
+      return { ...item, x: clampedX, y: clampedY, revealHeight: newRevealHeight };
     }));
   }, []);
 
@@ -318,7 +348,10 @@ const AdminBuilder = ({ onManageLanguages }) => {
     const gridSpacing = 70;
     const startX = 60;
     const startY = 60;
-    const placeX = Math.min(BASE_WIDTH - itemWidth - 20, startX + (sameTypeCount % gridCols) * gridSpacing);
+    const placeX = Math.min(
+      Math.max(20, 800 - itemWidth - 20),
+      startX + (sameTypeCount % gridCols) * gridSpacing
+    );
     const placeY = startY + Math.floor(sameTypeCount / gridCols) * gridSpacing;
 
     const newItem = {
@@ -355,7 +388,22 @@ const AdminBuilder = ({ onManageLanguages }) => {
       alert('No active language selected yet. Add/activate a language from "Manage languages" first.');
       return;
     }
-    const cardNumber = mapItems.filter((item) => item.type === 'Lesson Cards').length + 1;
+    const existingCards = mapItems.filter((item) => item.type === 'Lesson Cards');
+    const cardNumber = existingCards.length + 1;
+
+    // Serpentine layout in canonical 800-space: left/right alternating columns, 200 px apart vertically.
+    const canonicalWorldWidth = 800;
+    const cardW = 154;
+    const cardH = 72;
+    const leftX = 64;
+    const rightX = canonicalWorldWidth - 64 - cardW; // 582px
+    const stepY = 200;
+
+    const isEven = (cardNumber % 2) === 0;
+    const slotIndex = cardNumber - 1;
+    const cardX = isEven ? rightX : leftX;
+    const cardY = 80 + slotIndex * stepY;
+
     const newCard = {
       id: Date.now(),
       type: 'Lesson Cards',
@@ -363,11 +411,11 @@ const AdminBuilder = ({ onManageLanguages }) => {
       lessonMasterId: null,
       order: cardNumber,
       buildingId: null,
-      x: 100 + (cardNumber % 4) * 35,
-      y: 100 + (cardNumber % 5) * 30,
-      width: 154,
-      height: 72,
-      revealHeight: 100 + (cardNumber % 5) * 30 + 72 + 80,
+      x: cardX,
+      y: cardY,
+      width: cardW,
+      height: cardH,
+      revealHeight: cardY + cardH + 80,
       rotation: 0,
       content: { [activeLanguage]: { title: '', published: false } }
     };
@@ -375,7 +423,13 @@ const AdminBuilder = ({ onManageLanguages }) => {
     setSelectedId(newCard.id);
     setActiveLayer('Lesson Cards');
     setActiveTool('Select');
-  }, [activeLanguage, mapItems]);
+
+    requestAnimationFrame(() => {
+      if (responsiveContainerRef.current) {
+        responsiveContainerRef.current.scrollTo({ top: Math.max(0, cardY * scale - 150), behavior: 'smooth' });
+      }
+    });
+  }, [activeLanguage, containerWidth, mapItems, scale]);
 
   const handleDeleteCustomAsset = useCallback((id) => {
     setCustomAssetsList((prev) => prev.filter((asset) => asset.id !== id));
@@ -700,7 +754,9 @@ const AdminBuilder = ({ onManageLanguages }) => {
   }, [handleStageClick]);
 
   const handleDragPoint = useCallback((index, x, y) => {
-    handleUpdatePoint(index, { x, y });
+    const clampedX = Math.max(0, Math.min(800, Math.round(x)));
+    const clampedY = Math.max(0, Math.round(y));
+    handleUpdatePoint(index, { x: clampedX, y: clampedY });
   }, [handleUpdatePoint]);
 
   const handleTestWalkWrapper = useCallback(() => {
@@ -835,7 +891,7 @@ const AdminBuilder = ({ onManageLanguages }) => {
         onSave={handleSaveMapChanges}
       />
 
-      <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-[320px_minmax(0,1fr)_320px] overflow-hidden w-full relative">
+      <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-[260px_minmax(0,1fr)_280px] xl:grid-cols-[300px_minmax(0,1fr)_320px] overflow-hidden w-full relative">
         <aside
           aria-hidden={!isLeftPanelOpen}
           className={`fixed lg:relative inset-y-0 left-0 z-[55] lg:z-auto w-[88%] max-w-sm sm:w-80 lg:w-auto bg-white border-r border-slate-200 flex flex-col min-h-0 overflow-hidden transition-transform duration-200 ${isLeftPanelOpen ? 'translate-x-0 shadow-2xl lg:shadow-none' : '-translate-x-full pointer-events-none lg:pointer-events-auto'} lg:translate-x-0`}
@@ -892,9 +948,10 @@ const AdminBuilder = ({ onManageLanguages }) => {
           <div className="fixed inset-0 bg-black/40 z-[54] lg:hidden touch-none overscroll-none" onClick={() => setIsLeftPanelOpen(false)}></div>
         )}
 
-        <div className="bg-slate-100 p-0 md:p-4 flex flex-col items-stretch relative overflow-hidden w-full min-w-0 h-full flex-1">
+        <div className="bg-slate-900 p-0 flex flex-col items-stretch relative overflow-hidden w-full min-w-0 h-full flex-1">
           <div className="flex-1 min-h-0 w-full relative overflow-y-auto overflow-x-hidden" ref={responsiveContainerRef}>
             <MapStage
+              metrics={metrics}
               stageRef={stageRef}
               trRef={trRef}
               containerWidth={containerWidth}
@@ -921,6 +978,9 @@ const AdminBuilder = ({ onManageLanguages }) => {
               onTransformEnd={handleTransformEnd}
               onSelectPoint={setSelectedPointIndex}
               onDragPoint={handleDragPoint}
+              onDrawStart={(e) => handleDrawStart(e, stageRef)}
+              onDrawMove={(e) => handleDrawMove(e, stageRef)}
+              onDrawEnd={handleDrawEnd}
             />
 
             {isEditMode && (
@@ -946,6 +1006,10 @@ const AdminBuilder = ({ onManageLanguages }) => {
             )}
           </div>
         </div>
+
+        {isRightPanelOpen && (
+          <div className="fixed inset-0 bg-black/40 z-[54] lg:hidden touch-none overscroll-none" onClick={() => setIsRightPanelOpen(false)}></div>
+        )}
 
         <aside
           aria-hidden={!isRightPanelOpen}

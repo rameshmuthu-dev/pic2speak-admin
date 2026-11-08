@@ -1,7 +1,8 @@
 import React from 'react';
-import { Line } from 'react-konva';
+import { Group, Line, Circle } from 'react-konva';
+import { DEFAULT_ROAD_WIDTH } from '../../utils/mapProjection.js';
 
-const RoadPath = React.memo(({ path }) => {
+const RoadPath = React.memo(({ path, stations = [] }) => {
   if (
     !path ||
     !path.visible ||
@@ -11,28 +12,42 @@ const RoadPath = React.memo(({ path }) => {
     return null;
   }
 
-  const roadWidth = Math.max(1, Number(path.width) || 36);
-  const roadColor = path.color || '#e8cd9e';
+  const points = path.points;
+  const roadWidth = Math.max(24, Number(path.width) || DEFAULT_ROAD_WIDTH);
 
   return (
-    <>
-      {/* Outer road border */}
+    <Group listening={false}>
+      {/* Outer Cyan Glow Shadow */}
       <Line
-        points={path.points}
-        stroke="#a9825a"
-        strokeWidth={roadWidth + 10}
+        points={points}
+        stroke="rgba(0, 240, 255, 0.4)"
+        strokeWidth={roadWidth + 14}
         lineCap="round"
         lineJoin="round"
         tension={0.4}
-        opacity={0.9}
+        shadowColor="#00f0ff"
+        shadowBlur={16}
+        shadowOpacity={0.7}
         listening={false}
         perfectDrawEnabled={false}
       />
 
-      {/* Main road surface */}
+      {/* Electric Cyan Border */}
       <Line
-        points={path.points}
-        stroke={roadColor}
+        points={points}
+        stroke="#00f0ff"
+        strokeWidth={roadWidth + 6}
+        lineCap="round"
+        lineJoin="round"
+        tension={0.4}
+        listening={false}
+        perfectDrawEnabled={false}
+      />
+
+      {/* Deep Neon Purple / Blue Road Surface */}
+      <Line
+        points={points}
+        stroke="#1a1c3d"
         strokeWidth={roadWidth}
         lineCap="round"
         lineJoin="round"
@@ -42,20 +57,63 @@ const RoadPath = React.memo(({ path }) => {
         perfectDrawEnabled={false}
       />
 
-      {/* Dashed road center line */}
+      {/* Radiant Electric Blue Core Stream */}
       <Line
-        points={path.points}
-        stroke="#f6ecd2"
-        strokeWidth={Math.max(4, roadWidth * 0.32)}
+        points={points}
+        stroke="#3b82f6"
+        strokeWidth={roadWidth * 0.55}
         lineCap="round"
         lineJoin="round"
         tension={0.4}
-        opacity={0.7}
-        dash={[16, 14]}
+        opacity={0.4}
         listening={false}
         perfectDrawEnabled={false}
       />
-    </>
+
+      {/* Crisp White Dashed Center Line */}
+      <Line
+        points={points}
+        stroke="#ffffff"
+        strokeWidth={Math.max(3, roadWidth * 0.08)}
+        lineCap="round"
+        lineJoin="round"
+        tension={0.4}
+        opacity={0.9}
+        dash={[14, 12]}
+        listening={false}
+        perfectDrawEnabled={false}
+      />
+
+      {/* Milestone Station Node Rings along the road */}
+      {stations.map((st, idx) => (
+        <Group key={`station-node-${idx}`} x={st.x} y={st.y}>
+          {/* Outer glow ring */}
+          <Circle
+            radius={15}
+            stroke="#00f0ff"
+            strokeWidth={3}
+            fill="rgba(7, 20, 38, 0.9)"
+            shadowColor="#00f0ff"
+            shadowBlur={10}
+            shadowOpacity={0.8}
+          />
+          {/* Secondary purple ring */}
+          <Circle
+            radius={9}
+            stroke="#8b5cf6"
+            strokeWidth={2}
+            fill="#071426"
+          />
+          {/* Glowing central core */}
+          <Circle
+            radius={4}
+            fill={st.isCurrent ? '#00f0ff' : '#ffffff'}
+            shadowColor={st.isCurrent ? '#00f0ff' : '#ffffff'}
+            shadowBlur={6}
+          />
+        </Group>
+      ))}
+    </Group>
   );
 });
 

@@ -45,8 +45,8 @@ export const useRoadPath = (
       if (!pointer) return null;
 
       return {
-        x: pointer.x / scale,
-        y: pointer.y / scale,
+        x: Math.max(0, Math.min(800, Math.round((pointer.x / scale) * 10) / 10)),
+        y: Math.max(0, Math.round((pointer.y / scale) * 10) / 10),
       };
     },
     [scale]
@@ -95,7 +95,7 @@ export const useRoadPath = (
   const handleDrawStart = useCallback(
     (event, stageRef) => {
       if (activeTool !== 'Draw Path') return;
-      if (activeLayer !== 'All Layers' && activeLayer !== 'Roads') return;
+      if (activeLayer !== 'All Layers' && activeLayer !== 'Roads' && activeLayer !== 'Roads & Paths') return;
 
       const stage = stageRef?.current?.getStage?.();
       if (!stage) return;

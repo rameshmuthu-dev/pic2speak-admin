@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { getResponsiveLayoutMetrics } from '../utils/mapProjection.js';
 
-const BASE_WIDTH = 800;
+export const CANONICAL_WORLD_WIDTH = 800;
 
 export const useResponsiveContainer = (responsiveContainerRef, isDataLoaded) => {
-  const [containerHeight, setContainerHeight] = useState(600);
-  const [containerWidth, setContainerWidth] = useState(BASE_WIDTH);
+  const [containerHeight, setContainerHeight] = useState(800);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   useEffect(() => {
     const node = responsiveContainerRef.current;
@@ -30,9 +31,8 @@ export const useResponsiveContainer = (responsiveContainerRef, isDataLoaded) => 
       const widthIsValid = setMeasuredDimension(setContainerWidth, measuredWidth);
       const heightIsValid = setMeasuredDimension(setContainerHeight, measuredHeight);
 
-      // Flex layouts can report zero during an intermediate mobile layout
-      // pass. Keep the last valid dimensions and retry on the next frame
-      // instead of mounting a zero-sized Konva stage.
+      // Flex layouts can report zero during an intermediate layout pass.
+      // Retry for up to 10 frames if dimensions are not yet valid.
       if ((!widthIsValid || !heightIsValid) && retryCount < 10) {
         retryCount += 1;
         retryFrame = window.requestAnimationFrame(updateDimensions);
@@ -60,12 +60,15 @@ export const useResponsiveContainer = (responsiveContainerRef, isDataLoaded) => 
     };
   }, [isDataLoaded, responsiveContainerRef]);
 
-  const scale = Math.max(0.1, containerWidth / BASE_WIDTH);
+  const effectiveWidth = containerWidth || (typeof window !== 'undefined' ? window.innerWidth : CANONICAL_WORLD_WIDTH);
+  // Shared uniform responsive scale from the actual available canvas width relative to canonical 800px world
+  const scale = Number((effectiveWidth / CANONICAL_WORLD_WIDTH).toFixed(6));
+  const metrics = useMemo(() => getResponsiveLayoutMetrics(effectiveWidth), [effectiveWidth]);
 
   return {
-    containerWidth,
+    containerWidth: effectiveWidth,
     containerHeight,
+    metrics,
     scale,
-    BASE_WIDTH
   };
 };
