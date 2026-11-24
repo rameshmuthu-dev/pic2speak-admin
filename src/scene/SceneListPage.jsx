@@ -123,8 +123,6 @@ const SceneCard = ({ scene, index, onEdit, onManageContent, onStatusToggle, onDe
 const SceneListPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
-  // FIXED: lessonMasterld -> lessonMasterId (Capital I)
   const { lessonMasterId } = useParams();
 
   const scenes = useSelector(selectAllScenes);
@@ -260,3 +258,4 @@ const SceneListPage = () => {
 };
 
 export default SceneListPage;
+            
