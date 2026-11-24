@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -26,9 +26,6 @@ import {
 } from 'lucide-react';
 import Loading from '../ui/Loading';
 
-const getLessonId = (scene) =>
-  typeof scene.lessonMasterId === 'object' ? scene.lessonMasterId?._id : scene.lessonMasterId;
-
 const CARD_PALETTE = [
   { from: '#6d28d9', to: '#8b5cf6' },
   { from: '#0d9488', to: '#14b8a6' },
@@ -40,7 +37,6 @@ const CARD_PALETTE = [
 
 const SceneCard = ({ scene, index, onEdit, onManageContent, onStatusToggle, onDelete }) => {
   const palette = CARD_PALETTE[index % CARD_PALETTE.length];
-
   return (
     <div className="group relative bg-white rounded-[1.75rem] overflow-hidden shadow-lg shadow-slate-200/60 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
       <div
@@ -72,7 +68,7 @@ const SceneCard = ({ scene, index, onEdit, onManageContent, onStatusToggle, onDe
           <span className="px-3 py-1.5 bg-white/20 backdrop-blur-md text-white font-black text-sm rounded-xl border border-white/25 shadow-sm">
             {String(scene.order).padStart(2, '0')}
           </span>
-          <span className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl flex items-center gap-1.5 shadow-sm ${scene.isActive ? 'bg-white text-emerald-600' : 'bg-white/80 text-slate-500'}`}>
+          <span className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl flex items-center gap-1.5 shadow-sm ${scene.isActive ? 'bg-white text-emerald-600' : 'bg-white/85 text-slate-500'}`}>
             <span className={`inline-block w-1.5 h-1.5 rounded-full ${scene.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
             {scene.isActive ? 'Active' : 'Inactive'}
           </span>
@@ -83,21 +79,37 @@ const SceneCard = ({ scene, index, onEdit, onManageContent, onStatusToggle, onDe
       </div>
       <div className="p-5 bg-white flex-1 flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
-          <button type="button" onClick={onEdit} className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-slate-200 text-slate-700 rounded-2xl text-xs font-bold hover:border-teal-400 hover:text-teal-700 hover:bg-teal-50/50 transition-all cursor-pointer">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-slate-200 text-slate-700 rounded-2xl text-xs font-bold hover:border-teal-400 hover:text-teal-700 hover:bg-teal-50/50 transition-all cursor-pointer"
+          >
             <Pencil size={14} strokeWidth={2.5} />
             Edit Scene
           </button>
-          <button type="button" onClick={onManageContent} className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-indigo-200 text-indigo-700 rounded-2xl text-xs font-bold hover:border-indigo-400 hover:bg-indigo-50/60 transition-all cursor-pointer">
+          <button
+            type="button"
+            onClick={onManageContent}
+            className="flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-indigo-200 text-indigo-700 rounded-2xl text-xs font-bold hover:border-indigo-400 hover:bg-indigo-50/60 transition-all cursor-pointer"
+          >
             <FolderOpen size={14} strokeWidth={2.5} />
             Manage Content
           </button>
         </div>
         <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-          <button type="button" onClick={onStatusToggle} className={`flex items-center gap-1.5 text-xs font-bold cursor-pointer px-2 py-1 rounded-lg transition-all ${scene.isActive ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'}`}>
+          <button
+            type="button"
+            onClick={onStatusToggle}
+            className={`flex items-center gap-1.5 text-xs font-bold cursor-pointer px-2 py-1 rounded-lg transition-all ${scene.isActive ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+          >
             <Power size={13} strokeWidth={2.5} />
             {scene.isActive ? 'Deactivate' : 'Activate'}
           </button>
-          <button type="button" onClick={onDelete} className="flex items-center gap-1.5 text-xs font-bold text-red-500 hover:bg-red-50 cursor-pointer px-2 py-1 rounded-lg transition-all">
+          <button
+            type="button"
+            onClick={onDelete}
+            className="flex items-center gap-1.5 text-xs font-bold text-red-500 hover:bg-red-50 cursor-pointer px-2 py-1 rounded-lg transition-all"
+          >
             <Trash2 size={13} strokeWidth={2.5} />
             Delete
           </button>
@@ -111,6 +123,8 @@ const SceneCard = ({ scene, index, onEdit, onManageContent, onStatusToggle, onDe
 const SceneListPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  
+  // FIXED: lessonMasterld -> lessonMasterId (Capital I)
   const { lessonMasterId } = useParams();
 
   const scenes = useSelector(selectAllScenes);
@@ -131,14 +145,16 @@ const SceneListPage = () => {
 
   const handleStatusToggle = (scene) => {
     dispatch(changeSceneStatus({ id: scene._id, isActive: !scene.isActive })).then((res) => {
-      if (res.meta.requestStatus === 'fulfilled') toast.success(scene.isActive ? 'Scene deactivated.' : 'Scene activated.');
+      if (res.meta.requestStatus === 'fulfilled')
+        toast.success(scene.isActive ? 'Scene deactivated.' : 'Scene activated.');
     });
   };
 
   const handleDelete = (id) => {
     if (window.confirm('Delete this scene? This cannot be undone.')) {
       dispatch(deleteScene(id)).then((res) => {
-        if (res.meta.requestStatus === 'fulfilled') toast.success('Scene deleted successfully!');
+        if (res.meta.requestStatus === 'fulfilled')
+          toast.success('Scene deleted successfully!');
         else toast.error(res.payload || 'Failed to delete scene.');
       });
     }
@@ -157,8 +173,8 @@ const SceneListPage = () => {
             <div>
               <h1 className="text-4xl font-black tracking-tight text-slate-900">Scenes</h1>
               <p className="text-slate-500 mt-0.5 font-medium text-sm">
-                Dashboard <span className="mx-1 text-slate-300">›</span> Lessons{' '}
-                <span className="mx-1 text-slate-300">›</span>{' '}
+                Dashboard <span className="mx-1 text-slate-300">&gt;</span> Lessons{' '}
+                <span className="mx-1 text-slate-300">&gt;</span>{' '}
                 <span className="text-indigo-600 font-semibold">
                   {lessonMaster ? `Lesson ${lessonMaster.order}` : 'Scenes'}
                 </span>
@@ -166,11 +182,19 @@ const SceneListPage = () => {
             </div>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
-            <button type="button" onClick={() => navigate('/admin/lesson-masters')} className="flex items-center gap-2 px-4 py-2.5 border-2 border-slate-200 text-slate-700 rounded-2xl text-xs font-bold hover:bg-slate-100 transition-all cursor-pointer">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/lesson-masters')}
+              className="flex items-center gap-2 px-4 py-2.5 border-2 border-slate-200 text-slate-700 rounded-2xl text-xs font-bold hover:bg-slate-100 transition-all cursor-pointer"
+            >
               <ArrowLeft size={14} strokeWidth={2.5} />
               Back to Lessons
             </button>
-            <button type="button" onClick={() => navigate(`/admin/scenes/create/${lessonMasterId}`)} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold shadow-lg shadow-indigo-200 transition-all cursor-pointer">
+            <button
+              type="button"
+              onClick={() => navigate(`/admin/scenes/create/${lessonMasterId}`)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-bold shadow-lg shadow-indigo-200 transition-all cursor-pointer"
+            >
               <Plus size={16} strokeWidth={3} />
               Add Scene
             </button>
@@ -181,13 +205,19 @@ const SceneListPage = () => {
       {error && (
         <div className="max-w-6xl mx-auto mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-sm font-semibold text-red-600 flex items-center justify-between">
           {error}
-          <button type="button" onClick={() => dispatch(clearSceneError())} className="text-red-400 hover:text-red-600 cursor-pointer text-lg leading-none">✕</button>
+          <button
+            type="button"
+            onClick={() => dispatch(clearSceneError())}
+            className="text-red-400 hover:text-red-600 cursor-pointer text-lg leading-none"
+          >
+            X
+          </button>
         </div>
       )}
 
       <div className="max-w-6xl mx-auto">
         {status === 'loading' ? (
-          <div className="text-center py-20 text-slate-400 font-semibold">Loading scenes…</div>
+          <div className="text-center py-20 text-slate-400 font-semibold">Loading scenes...</div>
         ) : lessonScenes.length === 0 ? (
           <div className="py-28 text-center bg-white rounded-3xl border border-slate-200 shadow-sm">
             <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -195,7 +225,11 @@ const SceneListPage = () => {
             </div>
             <h3 className="font-black text-2xl text-slate-700 mb-2">No Scenes Yet</h3>
             <p className="font-medium text-slate-400 mb-8 max-w-xs mx-auto">Add the first scene to start building this lesson.</p>
-            <button type="button" onClick={() => navigate(`/admin/scenes/create/${lessonMasterId}`)} className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-bold shadow-lg transition-all cursor-pointer">
+            <button
+              type="button"
+              onClick={() => navigate(`/admin/scenes/create/${lessonMasterId}`)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-bold shadow-lg transition-all cursor-pointer"
+            >
               <Plus size={18} strokeWidth={3} />
               Add First Scene
             </button>
