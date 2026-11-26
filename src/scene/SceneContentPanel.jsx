@@ -114,7 +114,7 @@ const SceneContentPanel = () => {
 
   useEffect(() => {
     return () => {
-      // Clean up object URLs
+      // Clean up object URLs if needed
     };
   }, [audioPreviewUrl]);
 
@@ -212,6 +212,12 @@ const SceneContentPanel = () => {
       if (res.meta.requestStatus === 'fulfilled') {
         toast.success('Content deleted successfully!');
         dispatch(fetchSceneContents(sceneId));
+        // If the deleted content was currently selected in form, reset form fields
+        if (getLangId(content) === languageId) {
+          setSentence('');
+          setAudioFile(null);
+          setAudioPreviewUrl('');
+        }
       } else {
         toast.error(res.payload || 'Failed to delete.');
       }

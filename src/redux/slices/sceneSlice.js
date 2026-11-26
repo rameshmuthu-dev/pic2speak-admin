@@ -162,10 +162,17 @@ const sceneSlice = createSlice({
         state.error = action.payload;
       })
 
+      .addCase(deleteScene.pending, (state) => {
+        state.actionStatus = 'loading';
+        state.error = null;
+      })
       .addCase(deleteScene.fulfilled, (state, action) => {
-        state.items = state.items.filter((s) => s._id !== action.payload);
+        state.actionStatus = 'succeeded';
+        const deletedId = action.payload || action.meta.arg;
+        state.items = state.items.filter((s) => s._id !== deletedId);
       })
       .addCase(deleteScene.rejected, (state, action) => {
+        state.actionStatus = 'failed';
         state.error = action.payload;
       });
   },

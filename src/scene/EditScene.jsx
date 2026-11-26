@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-// Unga redux paths-ai sariyaaga check pannikonga
 import {
   fetchSceneById,
   updateScene,
@@ -20,6 +19,7 @@ const EditScene = () => {
   const actionStatus = useSelector(selectSceneActionStatus);
 
   const [order, setOrder] = useState('');
+  const [isActive, setIsActive] = useState(true);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [formError, setFormError] = useState('');
@@ -35,6 +35,7 @@ const EditScene = () => {
   useEffect(() => {
     if (scene) {
       setOrder(scene.order || '');
+      setIsActive(scene.isActive !== undefined ? scene.isActive : true);
       setImagePreview(scene.imageUrl || '');
     }
   }, [scene]);
@@ -61,6 +62,7 @@ const EditScene = () => {
     // FormData use pandrom yenna image file anuppa porom
     const formData = new FormData();
     formData.append('order', order);
+    formData.append('isActive', isActive);
     
     // Puthu image select panniruntha mattum append panna pothum
     if (imageFile) {
@@ -79,14 +81,14 @@ const EditScene = () => {
   };
 
   return (
-    <div className="p-6 bg-slate-50 min-h-screen flex justify-center items-start pt-10">
+    <div className="p-6 bg-slate-50 min-h-screen flex justify-center items-start pt-10 font-sans">
       <div className="bg-white w-full max-w-2xl rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         
         {/* Header Section */}
         <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Edit Scene</h2>
-            <p className="text-xs text-slate-500 mt-1">Update scene image and details</p>
+            <p className="text-xs text-slate-500 mt-1">Update scene order, status and image</p>
           </div>
           <button
             type="button"
@@ -107,19 +109,39 @@ const EditScene = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             
-            {/* Scene Order Input */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Scene Order
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={order}
-                onChange={(e) => setOrder(e.target.value)}
-                className="w-full md:w-1/2 px-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
-                placeholder="e.g., 1"
-              />
+            {/* Scene Order & Status Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Scene Order <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={order}
+                  onChange={(e) => setOrder(e.target.value)}
+                  className="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+                  placeholder="e.g., 1"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={isActive ? 'active' : 'inactive'}
+                  onChange={(e) => setIsActive(e.target.value === 'active')}
+                  className={`w-full px-4 py-2.5 text-sm font-semibold border rounded-xl cursor-pointer ${
+                    isActive
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-red-200 bg-red-50 text-red-700'
+                  }`}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
             </div>
 
             {/* Image Upload Section */}

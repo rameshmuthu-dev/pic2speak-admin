@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+﻿import React, { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -143,17 +143,22 @@ const SceneListPage = () => {
 
   const handleStatusToggle = (scene) => {
     dispatch(changeSceneStatus({ id: scene._id, isActive: !scene.isActive })).then((res) => {
-      if (res.meta.requestStatus === 'fulfilled')
+      if (res.meta.requestStatus === 'fulfilled') {
         toast.success(scene.isActive ? 'Scene deactivated.' : 'Scene activated.');
+        dispatch(fetchScenes(lessonMasterId));
+      }
     });
   };
 
   const handleDelete = (id) => {
     if (window.confirm('Delete this scene? This cannot be undone.')) {
       dispatch(deleteScene(id)).then((res) => {
-        if (res.meta.requestStatus === 'fulfilled')
+        if (res.meta.requestStatus === 'fulfilled') {
           toast.success('Scene deleted successfully!');
-        else toast.error(res.payload || 'Failed to delete scene.');
+          dispatch(fetchScenes(lessonMasterId)); // Refetch scenes to keep list fully in sync
+        } else {
+          toast.error(res.payload || 'Failed to delete scene.');
+        }
       });
     }
   };
@@ -258,4 +263,3 @@ const SceneListPage = () => {
 };
 
 export default SceneListPage;
-            

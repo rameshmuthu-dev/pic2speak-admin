@@ -4,9 +4,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
   fetchScenes,
+  fetchSceneById,
   createScene,
   updateScene,
   selectAllScenes,
+  selectSelectedScene,
   selectSceneActionStatus,
   selectSceneError,
   clearSceneError,
@@ -21,6 +23,7 @@ const SceneManager = () => {
   const { lessonMasterId, sceneId } = useParams();
 
   const scenes = useSelector(selectAllScenes);
+  const selectedScene = useSelector(selectSelectedScene);
   const actionStatus = useSelector(selectSceneActionStatus);
   const error = useSelector(selectSceneError);
 
@@ -38,7 +41,10 @@ const SceneManager = () => {
   useEffect(() => {
     if (!lessonMasterId) return;
     dispatch(fetchScenes(lessonMasterId));
-  }, [dispatch, lessonMasterId]);
+    if (isEdit && sceneId) {
+      dispatch(fetchSceneById(sceneId));
+    }
+  }, [dispatch, lessonMasterId, isEdit, sceneId]);
 
   const lessonScenes = useMemo(
     () => scenes.filter((s) => getLessonId(s) === lessonMasterId),
@@ -52,9 +58,10 @@ const SceneManager = () => {
 
   const nextAutoOrder = currentLastOrder + 1;
 
+  // Set form values when editing (using selectedScene or fallback to lessonScenes)
   useEffect(() => {
     if (isEdit) {
-      const existing = lessonScenes.find((s) => s._id === sceneId);
+      const existing = selectedScene || lessonScenes.find((s) => s._id === sceneId);
       if (existing) {
         setOrderMode('manual');
         setOrder(existing.order);
@@ -62,7 +69,7 @@ const SceneManager = () => {
         setIsActive(existing.isActive);
       }
     }
-  }, [isEdit, sceneId, lessonScenes]);
+  }, [isEdit, sceneId, selectedScene, lessonScenes]);
 
   const handleFile = (file) => {
     if (!file) return;
@@ -113,6 +120,7 @@ const SceneManager = () => {
       const orderToSubmit = buildOrderToSubmit();
       if (orderToSubmit) formData.append('order', orderToSubmit);
       if (imageFile) formData.append('image', imageFile);
+      formData.append('isActive', isActive);
 
       const result = await dispatch(updateScene({ id: sceneId, formData }));
       if (result.meta.requestStatus !== 'fulfilled') {
@@ -125,6 +133,7 @@ const SceneManager = () => {
       formData.append('lessonMasterId', lessonMasterId);
       formData.append('order', buildOrderToSubmit());
       formData.append('image', imageFile);
+      formData.append('isActive', isActive);
 
       const result = await dispatch(createScene(formData));
       if (result.meta.requestStatus !== 'fulfilled') {
@@ -158,17 +167,10 @@ const SceneManager = () => {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate('/admin/lessons')}
+            onClick={() => navigate(`/admin/scenes/${lessonMasterId}`)}
             className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
           >
-            ← Back to Lessons
-          </button>
-          <button
-            type="button"
-            onClick={goToSceneList}
-            className="flex items-center gap-1.5 px-4 py-2 border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-50 cursor-pointer"
-          >
-            View Scene List →
+            ← Back to Scenes
           </button>
         </div>
       </div>
@@ -227,7 +229,7 @@ const SceneManager = () => {
                   onChange={(e) => setOrder(e.target.value)}
                   className="w-full px-3 py-2.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer"
                 >
-                  {Array.from({ length: lessonScenes.length }, (_, i) => i + 1).map((n) => (
+                  {Array.from({ length: lessonScenes.length || Number(order) || 1 }, (_, i) => i + 1).map((n) => (
                     <option key={n} value={n}>{n}</option>
                   ))}
                 </select>

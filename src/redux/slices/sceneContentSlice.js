@@ -61,7 +61,7 @@ export const deleteSceneContent = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       await API.delete(`${BASE_URL}/${id}`);
-      return id;
+      return id; // Returns the id to filter out from state items
     } catch (err) {
       return rejectWithValue(err?.response?.data?.message || err.message || 'Failed to delete scene content.');
     }
@@ -166,7 +166,9 @@ const sceneContentSlice = createSlice({
       })
       .addCase(deleteSceneContent.fulfilled, (state, action) => {
         state.actionStatus = 'succeeded';
-        state.items = state.items.filter((c) => c._id !== action.payload);
+        // Using action.payload or action.meta.arg to correctly filter deleted item ID
+        const deletedId = action.payload || action.meta.arg;
+        state.items = state.items.filter((c) => c._id !== deletedId);
       })
       .addCase(deleteSceneContent.rejected, (state, action) => {
         state.actionStatus = 'failed';
