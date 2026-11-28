@@ -86,6 +86,11 @@ const Navbar = () => {
       path: "/admin/adventure-map",
       icon: <Map size={18} />,
     },
+    {
+      name: "🎮 Games",
+      path: "/admin/games",
+      icon: null,
+    },
   ];
 
   const isLinkActive = (link) => {
@@ -107,6 +112,10 @@ const Navbar = () => {
 
     if (link.name === "Map") {
       return location.pathname.startsWith("/admin/adventure-map");
+    }
+
+    if (link.path === "/admin/games") {
+      return location.pathname.startsWith("/admin/games");
     }
 
     return false;

@@ -17,6 +17,7 @@ import SceneListPage from './scene/SceneListPage';
 import SceneContentPanel from './scene/SceneContentPanel';
 import EditScene from './scene/EditScene';
 import LessonList from './lessons/LessonList';
+import GamesManager from './pages/admin/GamesManager';
 
 /**
  * PROTECTED ROUTES WRAPPER
@@ -64,6 +65,7 @@ const App = () => {
              <Route path="/admin/scenes/:lessonMasterId" element={<SceneListPage />} />
              <Route path="/admin/scenes/:lessonMasterId/:sceneId/content" element={<SceneContentPanel />} />
              <Route path="/admin/scenes/:lessonMasterId/edit/:sceneId" element={<EditScene />} />
+             <Route path="/admin/games" element={<GamesManager />} />
              
           </Route>
 
